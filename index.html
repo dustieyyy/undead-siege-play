@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Undead Siege — Kestrel Field</title>
+  <link rel="icon" href="data:,">
+  <script type="importmap">
+    {"imports": {"three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/"}}
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #080a0b; font-family: system-ui, sans-serif; color: #eee; touch-action: none; user-select: none; -webkit-user-select: none; }
+    canvas { display: block; }
+    #overlay { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(ellipse, #111923cc, #040405f2); z-index: 10; text-align: center; cursor: pointer; }
+    #overlay.hidden { display: none; }
+    .panel { padding: 28px 30px; border: 1px solid #66503c; background: #0d0d0dd9; max-width: 470px; }
+    h1 { margin: 0 0 4px; color: #dfb179; letter-spacing: .18em; font-size: 27px; }
+    .sub { color: #b89a74; letter-spacing: .3em; font-size: 12px; margin: 0 0 14px; }
+    .small { color: #a7a7a7; line-height: 1.7; font-size: 14px; }
+    #loading { color: #8c8c8c; font-size: 12px; }
+    #hud { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
+    #vignette { position: fixed; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%); }
+    #crosshair { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; transform: translate(-50%, -50%); }
+    #crosshair::before, #crosshair::after { content: ''; position: absolute; background: #ece8d5; box-shadow: 0 0 4px #000; }
+    #crosshair::before { width: 14px; height: 2px; left: 0; top: 6px; }
+    #crosshair::after { width: 2px; height: 14px; left: 6px; top: 0; }
+    #zone { position: absolute; top: 22px; left: 26px; color: #d3bca0; letter-spacing: .1em; font-size: 14px; text-shadow: 0 1px 3px #000; }
+    #power { position: absolute; top: 44px; left: 26px; color: #a24a3a; letter-spacing: .14em; font-size: 11px; }
+    #power.on { color: #6fd38a; }
+    #left { position: absolute; bottom: 24px; left: 26px; }
+    #round { color: #b84035; font-size: 43px; line-height: 1; font-weight: 800; text-shadow: 0 2px 6px #000; }
+    #points { color: #e1c18c; font-size: 22px; font-weight: 700; text-shadow: 0 1px 4px #000; }
+    #points-delta { position: absolute; left: 70px; bottom: 4px; font-size: 16px; font-weight: 700; opacity: 0; }
+    #points-delta.up { color: #f0d080; } #points-delta.down { color: #e06a50; }
+    #points-delta.anim { animation: pd 1.1s ease-out; }
+    @keyframes pd { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-26px); } }
+    #right { position: absolute; bottom: 24px; right: 26px; text-align: right; font-size: 19px; color: #e0d6bf; text-shadow: 0 1px 3px #000; }
+    #bars { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); width: 220px; }
+    .bar { height: 10px; background: #292929; border: 1px solid #777; margin-top: 7px; }
+    .fill { height: 100%; width: 100%; background: #a23434; }
+    #stamina { background: #9e8d62; }
+    .label { font-size: 11px; color: #bdbdbd; }
+    #hitmarker { position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; transform: translate(-50%, -50%); opacity: 0; border: 1px solid #f0d19a; border-radius: 50%; transition: opacity .08s; }
+    #reload { color: #f5bd70; font-size: 12px; min-height: 18px; }
+    #prompt { position: absolute; left: 50%; top: 62%; transform: translateX(-50%); padding: 7px 14px 9px; background: #0a0a0acc; border: 1px solid #6b5640; color: #f0dcb4; font-size: 15px; letter-spacing: .03em; opacity: 0; transition: opacity .12s; white-space: nowrap; }
+    #prompt.show { opacity: 1; } #prompt.locked { color: #d68a70; border-color: #6a3a30; } #prompt.info { color: #b9b2a2; border-color: #444; }
+    #holdwrap { position: absolute; left: 50%; top: calc(62% + 38px); transform: translateX(-50%); width: 160px; height: 3px; background: #0006; }
+    #holdbar { height: 100%; width: 0; background: #e1c18c; }
+    #message { position: absolute; left: 50%; top: 30%; transform: translateX(-50%); font-size: 20px; letter-spacing: .12em; color: #e8d2a6; text-shadow: 0 2px 6px #000; opacity: 0; transition: opacity .3s; }
+    #message.show { opacity: 1; } #message.bad { color: #e07a62; } #message.good { color: #f0d890; }
+    #debug { position: absolute; top: 8px; right: 10px; font: 12px monospace; color: #9fd; background: #0008; padding: 4px 8px; }
+    #tip { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #7d7d7d; }
+    #touch { position: fixed; inset: 0; z-index: 3; pointer-events: none; display: none; }
+    #touch.on { display: block; }
+    .tbtn { position: absolute; pointer-events: auto; width: 64px; height: 64px; border-radius: 50%; border: 2px solid #c9a97a88; background: #00000055; color: #e8d6b4; font-size: 12px; display: grid; place-items: center; }
+    #t-fire { right: 24px; bottom: 130px; width: 84px; height: 84px; } #t-aim { right: 124px; bottom: 200px; } #t-reload { right: 124px; bottom: 120px; } #t-use { right: 34px; bottom: 236px; }
+    @media (max-width: 600px) { #tip { display: none; } #bars { width: 160px; left: 44%; } }
+    #stick { position: absolute; width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; border: 2px solid #ffffff44; display: none; }
+    #stick.on { display: block; }
+  </style>
+</head>
+<body>
+  <div id="vignette"></div>
+  <div id="overlay" role="button" tabindex="0">
+    <div class="panel">
+      <h1>UNDEAD SIEGE</h1>
+      <p class="sub">MAP 01 // KESTREL FIELD</p>
+      <p class="small">Click to enter • WASD move • Mouse look • Shift sprint<br>Left click fire • Right click aim • R reload<br><b>Hold F</b> to buy doors / use the power switch<br>P +1000 points (debug) • [ ] teleport • G spawn zones • K power • F3 stats</p>
+      <strong>CLICK TO PLAY</strong>
+      <p id="loading"></p>
+    </div>
+  </div>
+  <div id="hud">
+    <div id="crosshair"></div><div id="hitmarker"></div>
+    <div id="zone">KESTREL FIELD // OPS ROOM</div>
+    <div id="power">POWER OFF</div>
+    <div id="left"><div id="round">I</div><div id="points">500</div><div id="points-delta"></div></div>
+    <div id="bars"><span class="label">HEALTH</span><div class="bar"><div class="fill" id="health"></div></div><span class="label">STAMINA</span><div class="bar"><div class="fill" id="stamina"></div></div></div>
+    <div id="right"><span id="weapon-name">PISTOL</span><br><strong id="ammo">8 / 64</strong><div id="reload"></div></div>
+    <div id="prompt"></div><div id="holdwrap"><div id="holdbar"></div></div>
+    <div id="message"></div>
+    <div id="debug" hidden></div>
+    <div id="tip">KESTREL FIELD v2 • MAP PASS • zombies & rounds next</div>
+  </div>
+  <div id="touch" hidden><div id="stick"></div><div class="tbtn" id="t-fire">FIRE</div><div class="tbtn" id="t-aim">AIM</div><div class="tbtn" id="t-reload">RELOAD</div><div class="tbtn" id="t-use">USE</div></div>
+  <script type="module" src="./src/game.js"></script>
+</body>
+</html>
