@@ -1,0 +1,296 @@
+{
+ "pack": "Undead Siege - Kestrel Field audio",
+ "generated": "2026-11-12",
+ "sounds": [
+  {
+   "name": "zombie_groan_01",
+   "file": "audio/zombie_groan_01.mp3",
+   "category": "zombie",
+   "duration": 2.48,
+   "volume": 0.8,
+   "loop": false,
+   "source": "ElevenLabs eleven",
+   "prompt": ""
+  },
+  {
+   "name": "zombie_groan_02",
+   "file": "audio/zombie_groan_02.mp3",
+   "category": "zombie",
+   "duration": 2.47,
+   "volume": 0.8,
+   "loop": false,
+   "source": "ElevenLabs eleven",
+   "prompt": ""
+  },
+  {
+   "name": "zombie_groan_03",
+   "file": "audio/zombie_groan_03.mp3",
+   "category": "zombie",
+   "duration": 3.31,
+   "volume": 0.8,
+   "loop": false,
+   "source": "ElevenLabs eleven",
+   "prompt": ""
+  },
+  {
+   "name": "zombie_groan_04",
+   "file": "audio/zombie_groan_04.mp3",
+   "category": "zombie",
+   "duration": 1.48,
+   "volume": 0.8,
+   "loop": false,
+   "source": "ElevenLabs eleven",
+   "prompt": ""
+  },
+  {
+   "name": "zombie_groan_05",
+   "file": "audio/zombie_groan_05.mp3",
+   "category": "zombie",
+   "duration": 2.48,
+   "volume": 0.8,
+   "loop": false,
+   "source": "ElevenLabs eleven",
+   "prompt": ""
+  },
+  {
+   "name": "zombie_groan_06",
+   "file": "audio/zombie_groan_06.mp3",
+   "category": "zombie",
+   "duration": 1.76,
+   "volume": 0.8,
+   "loop": false,
+   "source": "ElevenLabs eleven_text_to_sound_v2",
+   "prompt": "Sprinting zombie shriek, harsh raspy scream burst, undead attacker charging, horror"
+  },
+  {
+   "name": "zombie_attack_swipe",
+   "file": "audio/zombie_attack_swipe.mp3",
+   "category": "zombie",
+   "duration": 0.63,
+   "volume": 0.9,
+   "loop": false,
+   "source": "ElevenLabs eleven_text_to_sound_v2",
+   "prompt": "Zombie claw swipe attack: fast whoosh of an arm and a fleshy hit impact with a snarl, horror game melee"
+  },
+  {
+   "name": "zombie_death",
+   "file": "audio/zombie_death.mp3",
+   "category": "zombie",
+   "duration": 1.9,
+   "volume": 0.9,
+   "loop": false,
+   "source": "ElevenLabs eleven_text_to_sound_v2",
+   "prompt": "Zombie death: choking final gurgle and body collapsing heavily onto a concrete floor, thud, horror game"
+  },
+  {
+   "name": "window_plank_tear",
+   "file": "audio/window_plank_tear.mp3",
+   "category": "barricade",
+   "duration": 1.02,
+   "volume": 0.85,
+   "loop": false,
+   "source": "ElevenLabs eleven_text_to_sound_v2",
+   "prompt": "Wooden board being violently ripped off a window frame, nails screeching out, splintering wood, crash"
+  },
+  {
+   "name": "window_plank_rebuild",
+   "file": "audio/window_plank_rebuild.mp3",
+   "category": "barricade",
+   "duration": 1.29,
+   "volume": 0.8,
+   "loop": false,
+   "source": "ElevenLabs eleven_text_to_sound_v2",
+   "prompt": "Player hammering a wooden plank onto a window frame: board placed, three quick hammer blows on nails"
+  },
+  {
+   "name": "pistol_shot",
+   "file": "audio/pistol_shot.mp3",
+   "category": "weapon",
+   "duration": 0.45,
+   "volume": 1.0,
+   "loop": false,
+   "source": "ElevenLabs eleven_text_to_sound_v2",
+   "prompt": "Single WWII-era semi-automatic pistol gunshot, sharp crack with short concrete room reflection, realistic"
+  },
+  {
+   "name": "pistol_reload",
+   "file": "audio/pistol_reload.mp3",
+   "category": "weapon",
+   "duration": 1.41,
+   "volume": 0.8,
+   "loop": false,
+   "source": "ElevenLabs eleven_text_to_sound_v2",
+   "prompt": "WWII-era pistol reload: magazine release, empty magazine drops, new magazine inserted, slide racked, metallic clicks"
+  },
+  {
+   "name": "pistol_empty_click",
+   "file": "audio/pistol_empty_click.mp3",
+   "category": "weapon",
+   "duration": 0.48,
+   "volume": 0.7,
+   "loop": false,
+   "source": "ElevenLabs eleven_text_to_sound_v2",
+   "prompt": "Dry fire click of an empty pistol, single small metallic trigger click"
+  },
+  {
+   "name": "door_debris_clear",
+   "file": "audio/door_debris_clear.mp3",
+   "category": "world",
+   "duration": 2.02,
+   "volume": 0.85,
+   "loop": false,
+   "source": "ElevenLabs eleven_text_to_sound_v2",
+   "prompt": "Debris barricade being cleared: wooden planks, sandbags and metal locker collapsing and sliding away, rubble tumbling"
+  },
+  {
+   "name": "purchase_chime",
+   "file": "audio/purchase_chime.mp3",
+   "category": "ui",
+   "duration": 0.64,
+   "volume": 0.6,
+   "loop": false,
+   "source": "ElevenLabs eleven_text_to_sound_v2",
+   "prompt": "Short satisfying purchase confirmation: old mechanical cash register ching with a soft bell, game UI"
+  },
+  {
+   "name": "power_switch_thunk",
+   "file": "audio/power_switch_thunk.mp3",
+   "category": "world",
+   "duration": 0.54,
+   "volume": 0.9,
+   "loop": false,
+   "source": "ElevenLabs eleven_text_to_sound_v2",
+   "prompt": "Heavy industrial knife-switch power lever pulled down, loud metal clunk and electrical arc snap"
+  },
+  {
+   "name": "generator_spinup",
+   "file": "audio/generator_spinup.mp3",
+   "category": "world",
+   "duration": 4.0,
+   "volume": 0.85,
+   "loop": false,
+   "source": "ElevenLabs eleven_text_to_sound_v2",
+   "prompt": "Old diesel generator cranking then starting and spinning up to a steady rumble, mechanical whine rising"
+  },
+  {
+   "name": "lights_buzz_on",
+   "file": "audio/lights_buzz_on.mp3",
+   "category": "world",
+   "duration": 3.4,
+   "volume": 0.7,
+   "loop": false,
+   "source": "ElevenLabs eleven_text_to_sound_v2 (relay click) + procedural fluorescent buzz layer",
+   "prompt": "Large floodlights switching on one after another with heavy clunks, then electrical hum and fluorescent buzz"
+  },
+  {
+   "name": "round_start_siren",
+   "file": "audio/round_start_siren.mp3",
+   "category": "round",
+   "duration": 6.0,
+   "volume": 0.75,
+   "loop": false,
+   "source": "ElevenLabs eleven_text_to_sound_v2",
+   "prompt": "Hand-cranked air-raid siren winding up into a long rising and falling wail, distant over a foggy airfield"
+  },
+  {
+   "name": "round_end_sting",
+   "file": "audio/round_end_sting.mp3",
+   "category": "round",
+   "duration": 3.0,
+   "volume": 0.7,
+   "loop": false,
+   "source": "ElevenLabs eleven_text_to_sound_v2",
+   "prompt": "Dark ominous round-end sting: deep low brass swell and reverberant timpani hit, horror, short"
+  },
+  {
+   "name": "supply_crate_open",
+   "file": "audio/supply_crate_open.mp3",
+   "category": "world",
+   "duration": 2.86,
+   "volume": 0.75,
+   "loop": false,
+   "source": "ElevenLabs eleven_text_to_sound_v2",
+   "prompt": "Wooden military supply crate lid creaking open with a mysterious music-box style eerie chime melody and soft shimmer, original"
+  },
+  {
+   "name": "perk_machine_hum",
+   "file": "audio/perk_machine_hum.mp3",
+   "category": "world",
+   "duration": 4.5,
+   "volume": 0.35,
+   "loop": true,
+   "source": "ElevenLabs eleven_text_to_sound_v2",
+   "prompt": "Old electrical field machine humming with a low tone, soft relay ticks and faint buzz, steady seamless loop"
+  },
+  {
+   "name": "footsteps_concrete",
+   "file": "audio/footsteps_concrete.mp3",
+   "category": "player",
+   "duration": 3.69,
+   "volume": 0.5,
+   "loop": false,
+   "source": "ElevenLabs eleven_text_to_sound_v2",
+   "prompt": "Boots walking on a dusty concrete bunker floor, steady pace, eight footsteps, dry interior"
+  },
+  {
+   "name": "footsteps_metal_catwalk",
+   "file": "audio/footsteps_metal_catwalk.mp3",
+   "category": "player",
+   "duration": 3.72,
+   "volume": 0.5,
+   "loop": false,
+   "source": "ElevenLabs eleven_text_to_sound_v2",
+   "prompt": "Boots walking on a metal grating catwalk, resonant metallic clanks, steady pace, eight footsteps"
+  },
+  {
+   "name": "ambient_wind_night",
+   "file": "audio/ambient_wind_night.mp3",
+   "category": "ambient",
+   "duration": 18.5,
+   "volume": 0.4,
+   "loop": true,
+   "source": "ElevenLabs eleven_text_to_sound_v2",
+   "prompt": "Cold night wind blowing across an empty foggy airfield, distant crickets, faint creaking metal, seamless ambience loop"
+  },
+  {
+   "name": "radio_crackle_loop",
+   "file": "audio/radio_crackle_loop.mp3",
+   "category": "ambient",
+   "duration": 10.5,
+   "volume": 0.3,
+   "loop": true,
+   "source": "ElevenLabs eleven_text_to_sound_v2",
+   "prompt": "Old military field radio static and crackle, faint distant unintelligible transmissions and morse beeps, seamless loop"
+  },
+  {
+   "name": "music_kestrel_ambient_loop",
+   "file": "audio/music_kestrel_ambient_loop.mp3",
+   "category": "music",
+   "duration": 88.5,
+   "volume": 0.35,
+   "loop": true,
+   "source": "ElevenLabs eleven_music_v2_5",
+   "prompt": "Original eerie dark ambient horror soundtrack loop for an abandoned WWII-era airfield at night in fog. Slow, sparse, minimal: low droning cello and synth pads, distant detuned music-box notes, faint g"
+  },
+  {
+   "name": "music_game_over_sting",
+   "file": "audio/music_game_over_sting.mp3",
+   "category": "music",
+   "duration": 8.48,
+   "volume": 0.6,
+   "loop": false,
+   "source": "ElevenLabs eleven_music_v2_5",
+   "prompt": "Original short game-over sting for a dark survival horror game: a slow descending minor-key piano and low strings phrase, a final deep bass hit and a long reverberant fading drone. Somber, final, inst"
+  },
+  {
+   "name": "vo_round_one",
+   "file": "audio/vo_round_one.mp3",
+   "category": "announcer",
+   "duration": 1.06,
+   "volume": 0.9,
+   "loop": false,
+   "source": "ElevenLabs eleven_multilingual_v2",
+   "prompt": "Round one."
+  }
+ ]
+}

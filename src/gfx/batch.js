@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {mergeGeometries} from 'three/addons/BufferGeometryUtils.js';
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Projected (box/triplanar-style) UVs from positions + normals, in meters / scale.
 export function projectUV(geo, su, sv) {

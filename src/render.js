@@ -5,10 +5,17 @@ import {createMaterials} from './gfx/materials.js';
 import {MapVisuals} from './gfx/scene.js';
 import {Atmosphere} from './gfx/atmosphere.js';
 
+let _blood = null;
+function bloodTexture() {
+  if (_blood) return _blood;
+  const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d');
+  const grd = g.createRadialGradient(16, 16, 1, 16, 16, 15); grd.addColorStop(0, '#fff'); grd.addColorStop(.5, '#bbb'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, 32, 32); _blood = new THREE.CanvasTexture(c); return _blood;
+}
 // Rendering and DOM are kept out of the game logic modules.
 export class Renderer {
   constructor(world) {
-    const q = QUALITY || {pixelRatio: 1.5, shadows: true, shadowSize: 2048, lights: 9, particles: 900, fogSheets: true, antialias: true};
+    const q = QUALITY;
     this.quality = q; this.qualityName = QUALITY_NAME;
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, .05, 450);
@@ -67,7 +74,15 @@ export class Renderer {
     const to = new THREE.Vector3(shot.end.x, shot.end.y, shot.end.z);
     const tracer = new THREE.Line(new THREE.BufferGeometry().setFromPoints([from, to]), new THREE.LineBasicMaterial({color: 0xffd08d, transparent: true, opacity: .7}));
     this.scene.add(tracer); this.effects.push({object: tracer, seconds: .075});
-    if (shot.hit) {
+    if (shot.zombie) {
+      // Blood puff: a few dark-red sprites thrown back along the shot.
+      for (let i = 0; i < (shot.head ? 7 : 4); i++) {
+        const s = new THREE.Sprite(new THREE.SpriteMaterial({map: bloodTexture(), color: shot.head ? 0x8a0d08 : 0x6a0b07, transparent: true, depthWrite: false, opacity: .9}));
+        s.position.copy(to); s.scale.setScalar(.12 + Math.random() * .14); this.scene.add(s);
+        const v = new THREE.Vector3((Math.random() - .5) * 1.6, Math.random() * 1.2, (Math.random() - .5) * 1.6).addScaledVector(from.clone().sub(to).normalize(), -.6);
+        this.effects.push({object: s, seconds: .35 + Math.random() * .15, vel: v, grow: 1.8});
+      }
+    } else if (shot.hit) {
       const impact = new THREE.Mesh(new THREE.SphereGeometry(.05, 6, 6), new THREE.MeshBasicMaterial({color: 0xffd29c}));
       impact.position.copy(to); this.scene.add(impact); this.effects.push({object: impact, seconds: .17});
     }
@@ -92,7 +107,8 @@ export class Renderer {
     this.gunRoot.rotation.x = this.weaponKick * .11;
     for (let i = this.effects.length - 1; i >= 0; i--) {
       const fx = this.effects[i]; fx.seconds -= dt;
-      if (fx.seconds <= 0) { this.scene.remove(fx.object); fx.object.geometry.dispose(); fx.object.material.dispose(); this.effects.splice(i, 1); }
+      if (fx.vel) { fx.object.position.addScaledVector(fx.vel, dt); fx.vel.y -= 6 * dt; fx.object.scale.multiplyScalar(1 + fx.grow * dt); fx.object.material.opacity = Math.max(0, fx.object.material.opacity - dt * 2); }
+      if (fx.seconds <= 0) { this.scene.remove(fx.object); if (!fx.object.isSprite) fx.object.geometry.dispose(); fx.object.material.dispose(); this.effects.splice(i, 1); }
     }
   }
   updatePlayer(player) {

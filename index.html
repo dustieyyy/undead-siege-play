@@ -19,6 +19,7 @@
     .sub { color: #b89a74; letter-spacing: .3em; font-size: 12px; margin: 0 0 14px; }
     .small { color: #a7a7a7; line-height: 1.7; font-size: 14px; }
     #loading { color: #8c8c8c; font-size: 12px; }
+    .credit { color: #6f6a62; font-size: 10px; margin: 10px 0 0; letter-spacing: .04em; }
     #hud { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
     #vignette { position: fixed; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%); }
     #crosshair { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; transform: translate(-50%, -50%); }
@@ -56,33 +57,44 @@
     .tbtn { position: absolute; pointer-events: auto; width: 64px; height: 64px; border-radius: 50%; border: 2px solid #c9a97a88; background: #00000055; color: #e8d6b4; font-size: 12px; display: grid; place-items: center; }
     #t-fire { right: 24px; bottom: 130px; width: 84px; height: 84px; } #t-aim { right: 124px; bottom: 200px; } #t-reload { right: 124px; bottom: 120px; } #t-use { right: 34px; bottom: 236px; }
     @media (max-width: 600px) { #tip { display: none; } #bars { width: 160px; left: 44%; } }
+    #hurt { position: fixed; inset: 0; pointer-events: none; z-index: 1; opacity: 0; background: radial-gradient(ellipse at center, transparent 35%, rgba(150,0,0,.75) 100%); }
+    #round.flash { animation: rf 2.6s ease-out; }
+    @keyframes rf { 0%, 30%, 60% { color: #f4efe6; text-shadow: 0 0 18px #ff6040; } 15%, 45%, 100% { color: #b84035; } }
+    #gameover { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: radial-gradient(ellipse, #2a0705d9, #050303f5); text-align: center; }
+    #gameover[hidden] { display: none; }
+    #gameover h2 { margin: 0 0 10px; font-size: 46px; letter-spacing: .22em; color: #c3392b; text-shadow: 0 3px 12px #000; }
+    #go-round { font-size: 22px; color: #e8d2a6; letter-spacing: .08em; margin-bottom: 8px; }
+    #go-stats { font-size: 13px; color: #a99c88; margin-bottom: 22px; }
+    #restart { pointer-events: auto; font: inherit; font-size: 16px; letter-spacing: .2em; padding: 10px 28px; background: #1a0f0b; color: #f0dcb4; border: 1px solid #a5543c; cursor: pointer; }
     #stick { position: absolute; width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; border: 2px solid #ffffff44; display: none; }
     #stick.on { display: block; }
   </style>
 </head>
 <body>
-  <div id="vignette"></div>
+  <div id="vignette"></div><div id="hurt"></div>
   <div id="overlay" role="button" tabindex="0">
     <div class="panel">
       <h1>UNDEAD SIEGE</h1>
       <p class="sub">MAP 01 // KESTREL FIELD</p>
-      <p class="small">Click to enter • WASD move • Mouse look • Shift sprint<br>Left click fire • Right click aim • R reload<br><b>Hold F</b> to buy doors / use the power switch<br>P +1000 points (debug) • [ ] teleport • G spawn zones • K power • F3 stats</p>
+      <p class="small">Click to enter • WASD move • Mouse look • Shift sprint<br>Left click fire • Right click aim • R reload<br><b>Hold F</b> to buy doors, rebuild barricades, flip the power<br>Debug: P +1000 pts • N skip round • J god mode • [ ] teleport • G spawns • K power • F3 stats<br>Sound starts after you click (headphones recommended)</p>
       <strong>CLICK TO PLAY</strong>
       <p id="loading"></p>
+      <p class="credit">Audio generated with ElevenLabs (elevenlabs.io) • three.js (MIT) • See CREDITS.md</p>
     </div>
   </div>
   <div id="hud">
     <div id="crosshair"></div><div id="hitmarker"></div>
     <div id="zone">KESTREL FIELD // OPS ROOM</div>
     <div id="power">POWER OFF</div>
-    <div id="left"><div id="round">I</div><div id="points">500</div><div id="points-delta"></div></div>
+    <div id="left"><div id="round"></div><div id="points">500</div><div id="points-delta"></div></div>
     <div id="bars"><span class="label">HEALTH</span><div class="bar"><div class="fill" id="health"></div></div><span class="label">STAMINA</span><div class="bar"><div class="fill" id="stamina"></div></div></div>
     <div id="right"><span id="weapon-name">PISTOL</span><br><strong id="ammo">8 / 64</strong><div id="reload"></div></div>
     <div id="prompt"></div><div id="holdwrap"><div id="holdbar"></div></div>
     <div id="message"></div>
     <div id="debug" hidden></div>
-    <div id="tip">KESTREL FIELD v2 • MAP PASS • zombies & rounds next</div>
+    <div id="tip">KESTREL FIELD v3 • survive the rounds</div>
   </div>
+  <div id="gameover" hidden><div><h2>YOU DIED</h2><div id="go-round"></div><div id="go-stats"></div><button id="restart">RESTART</button></div></div>
   <div id="touch" hidden><div id="stick"></div><div class="tbtn" id="t-fire">FIRE</div><div class="tbtn" id="t-aim">AIM</div><div class="tbtn" id="t-reload">RELOAD</div><div class="tbtn" id="t-use">USE</div></div>
   <script type="module" src="./src/game.js"></script>
 </body>

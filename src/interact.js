@@ -21,6 +21,9 @@ export class Interactions {
     this.items.push({kind: 'radio', id: 'radio', pos: SECRETS.radio.at, floor: 0, range: 1.6});
     this.items.push({kind: 'locker', id: 'locker', pos: SECRETS.locker.at, floor: 1, range: 1.5});
   }
+  addBarricades(barricades) {
+    for (const bar of barricades.list) this.items.push({kind: 'barricade', id: 'bar:' + bar.id, bar, pos: bar.inside, floor: bar.floor, range: 1.75});
+  }
   floorOf() { return this.player.feet > 2 ? 1 : 0; }
   find() {
     const p = this.player, fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw), floor = this.floorOf();
@@ -42,6 +45,7 @@ export class Interactions {
       case 'door':
         if (it.door.power) return this.power ? null : {text: 'Requires power — the generator is in the Hangar', can: false};
         return {text: `Hold F to ${it.door.debris ? 'clear debris' : 'open door'} — ${it.door.name} [${it.door.cost}]`, can: pts >= it.door.cost, cost: it.door.cost};
+      case 'barricade': return it.bar.boards < 6 && it.bar.occupant?.state !== 'vault' ? {text: 'Hold F to rebuild barricade', can: true, rebuild: true} : null;
       case 'power': return this.power ? null : {text: 'Hold F to turn on the power', can: true};
       case 'wallbuy': return {text: `${it.data.name} [${it.data.cost}] — wall-buy coming next update`, can: false, info: true};
       case 'perk': return {text: `${it.data.name} [${it.data.cost}]${it.data.needsPower && !this.power ? ' — needs power' : ''} — perks coming next update`, can: false, info: true};
@@ -55,14 +59,16 @@ export class Interactions {
       const d = it.door;
       if (this.player.points < d.cost) { this.hooks.message?.('Not enough points', 'bad'); return; }
       this.player.points -= d.cost; this.openDoor(d); this.hooks.points?.(-d.cost);
-      this.hooks.message?.(`${d.name} opened`, 'good');
-    } else if (it.kind === 'power') this.setPower(true);
+      this.hooks.message?.(`${d.name} opened`, 'good'); this.hooks.event?.(d.debris ? 'debris' : 'door', d);
+    } else if (it.kind === 'power') { this.setPower(true); this.hooks.event?.('power'); }
+    else if (it.kind === 'barricade') this.hooks.rebuild?.(it.bar);
   }
   openDoor(d) {
     if (d.open) return;
     this.world.openDoor(d); this.visuals.openDoor(d.id);
     for (const it of this.items) if (it.door === d) it.done = true;
     for (const a of d.opens || []) this.unlocked.add(a);
+    this.hooks.opened?.(d);
     this.hooks.changed?.();
   }
   setPower(on) {
@@ -76,9 +82,10 @@ export class Interactions {
     const it = this.find(); const pr = it && this.prompt(it);
     this.target = pr ? it : null; this.current = pr;
     const holding = input.down('KeyF') || input.down('KeyE');
+    this.holdNeeded = it?.kind === 'barricade' ? SETTINGS.rebuildHoldSeconds : SETTINGS.holdToBuySeconds;
     if (pr && !pr.info && holding && this.cooldown <= 0) {
       this.hold += dt;
-      if (this.hold >= SETTINGS.holdToBuySeconds) { this.hold = 0; this.cooldown = .6; if (pr.can) this.act(it); else if (pr.cost) this.hooks.message?.('Not enough points', 'bad'); }
+      if (this.hold >= this.holdNeeded) { this.hold = 0; this.cooldown = it.kind === 'barricade' ? 0 : .6; if (pr.can) this.act(it); else if (pr.cost) this.hooks.message?.('Not enough points', 'bad'); }
     } else if (!holding) this.hold = 0;
     return pr;
   }
