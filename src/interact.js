@@ -17,7 +17,8 @@ export class Interactions {
     this.items.push({kind: 'power', id: 'power', pos: POWER.at, floor: 0, range: 1.8});
     for (const w of WALLBUYS) this.items.push({kind: 'wallbuy', id: w.id, data: w, pos: w.at, floor: w.floor, range: 1.9});
     for (const p of PERKS) this.items.push({kind: 'perk', id: p.id, data: p, pos: p.at, floor: p.floor, range: 1.9});
-    for (const c of SUPPLY_CRATES.filter(c => c.firstSpawn)) this.items.push({kind: 'crate', id: c.id, data: c, pos: c.at, floor: c.floor, range: 1.8});
+    const c0 = SUPPLY_CRATES.find(c => c.firstSpawn) || SUPPLY_CRATES[0];
+    this.crateItem = {kind: 'crate', id: 'crate', data: c0, pos: c0.at, floor: c0.floor, range: 1.8}; this.items.push(this.crateItem);
     this.items.push({kind: 'radio', id: 'radio', pos: SECRETS.radio.at, floor: 0, range: 1.6});
     this.items.push({kind: 'locker', id: 'locker', pos: SECRETS.locker.at, floor: 1, range: 1.5});
   }
@@ -53,7 +54,7 @@ export class Interactions {
         return {text: `Hold F to buy ${name} [${it.data.cost}]`, can: pts >= it.data.cost, cost: it.data.cost};
       }
       case 'perk': return {text: `${it.data.name} [${it.data.cost}]${it.data.needsPower && !this.power ? ' — needs power' : ''} — perks coming next update`, can: false, info: true};
-      case 'crate': return {text: `Supply Crate [${SUPPLY_CRATE_COST}] — coming next update`, can: false, info: true};
+      case 'crate': return this.crate ? this.crate.prompt(pts) : {text: `Supply Crate [${SUPPLY_CRATE_COST}]`, can: false, info: true};
       case 'radio': return {text: 'The field radio crackles… (something is missing)', can: false, info: true};
       case 'locker': return {text: "An officer's locker, rusted shut", can: false, info: true};
     }
@@ -70,6 +71,10 @@ export class Interactions {
       const pr = this.prompt(it); if (!pr || !pr.cost) return;
       if (this.player.points < pr.cost) { this.hooks.message?.('Not enough points', 'bad'); return; }
       this.player.points -= pr.cost; this.hooks.points?.(-pr.cost); this.hooks.buy?.(it.id, pr.cost);
+    } else if (it.kind === 'crate' && this.crate) {
+      const pr = this.prompt(it); if (!pr || pr.info) return;
+      if (pr.cost) { if (this.player.points < pr.cost) { this.hooks.message?.('Not enough points', 'bad'); return; } this.player.points -= pr.cost; this.hooks.points?.(-pr.cost); }
+      this.crate.act();
     }
   }
   openDoor(d) {
@@ -86,8 +91,11 @@ export class Interactions {
     if (on) { this.openDoor(DOORS.find(d => d.power)); this.hooks.message?.('POWER RESTORED — catwalk open', 'good'); }
     this.hooks.changed?.();
   }
+  // Attach the Supply Crate logic (its item follows the crate when it relocates).
+  setCrate(crate) { this.crate = crate; }
   update(dt, input) {
     this.cooldown = Math.max(0, this.cooldown - dt);
+    if (this.crate) { this.crateItem.pos = this.crate.pos; this.crateItem.floor = this.crate.floor; }
     const it = this.find(); const pr = it && this.prompt(it);
     this.target = pr ? it : null; this.current = pr;
     const holding = input.down('KeyF') || input.down('KeyE');

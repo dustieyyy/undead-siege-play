@@ -271,14 +271,20 @@ export function perkMachine(k, kind, lampMat) {
   k.box('darkSteel', 0, top, 0, .25, .06, .25, {shadow: false});
   k.add(lampMat, new THREE.SphereGeometry(.1, 12, 8), 0, top + .12, 0, {shadow: false});
 }
-export function supplyCrate(k) {
+export function supplyCrate(k, withLid = true) {
   // Padlocked olive footlocker, amber stencil shapes (no text).
   k.box('metalOD', 0, .28, 0, 1.15, .52, .55);
-  k.box('metalOD', 0, .57, 0, 1.17, .08, .57);
+  if (withLid) k.box('metalOD', 0, .57, 0, 1.17, .08, .57);
   for (const x of [-.5, .5]) k.box('darkSteel', x, .3, 0, .06, .6, .58, {shadow: false});
   k.box('darkSteel', 0, .4, .29, .09, .12, .03, {shadow: false});
   k.box('steel', 0, .3, .31, .07, .09, .03, {shadow: false});
   for (const x of [-.62, .62]) k.box('darkSteel', x, .4, 0, .04, .05, .22, {shadow: false});
+}
+// Lid alone (hinge at the back edge; local origin = lid centre at hinge height).
+export function supplyLid(k) {
+  k.box('metalOD', 0, .04, 0, 1.17, .08, .57);
+  for (const x of [-.5, .5]) k.box('darkSteel', x, .045, 0, .06, .085, .58, {shadow: false});
+  k.box('darkSteel', 0, .02, .29, .1, .05, .03, {shadow: false});
 }
 export function tree(k, h = 9) {
   k.cyl('bark', 0, h / 2, 0, .1, .22, h, 7);

@@ -295,23 +295,51 @@ export class MapVisuals {
 
   buildCrates(B) {
     const stencil = new THREE.MeshBasicMaterial({map: T.stencil(), transparent: true, depthWrite: false, color: 0xd9a050}); stencil.userData.scale = [1, 1]; this.M.stencil = stencil;
+    // Every spot gets a stencilled floor marking; the crate itself is one movable group.
     for (const c of SUPPLY_CRATES) {
       const h = c.floor ? F2 : 0, k = new Kit(B).at(c.at[0], c.at[1], h, c.rot);
-      if (c.firstSpawn) {
-        P.supplyCrate(k);
-        k.add('stencil', new THREE.PlaneGeometry(.38, .38), 0, .3, .281, {keepUV: true, shadow: false});
-        k.add('stencil', new THREE.PlaneGeometry(.45, .45), 0, .615, 0, {rx: -Math.PI / 2, keepUV: true, shadow: false});
-        this.light(c.at[0], c.at[1], h + 1.2, 0xffa63a, 3.5, 6, {flicker: .15, glow: 1.4});
-        // Faint amber beam marking the active spot
-        const beam = new THREE.Mesh(new THREE.CylinderGeometry(.3, .62, (c.floor ? UPPER_TOP - F2 : F2) - .9, 16, 1, true), new THREE.MeshBasicMaterial({color: 0xffa040, transparent: true, opacity: .05, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide}));
-        beam.position.set(c.at[0], h + ((c.floor ? UPPER_TOP - F2 : F2) - .9) / 2 + .55, -c.at[1]); beam.renderOrder = 5; this.root.add(beam); this.crateBeam = beam;
-      } else {
-        // Empty spot: stencilled floor marking + a few loose planks (placeholder for box moves).
-        k.add('stencil', new THREE.PlaneGeometry(1.2, 1.2), 0, .01, 0, {rx: -Math.PI / 2, keepUV: true, shadow: false});
-        P.planks(B, c.at[0], c.at[1], 2, h);
-      }
+      k.add('stencil', new THREE.PlaneGeometry(1.5, 1.5), 0, .012, 0, {rx: -Math.PI / 2, keepUV: true, shadow: false});
     }
+    const group = new THREE.Group(); group.name = 'supply-crate'; this.root.add(group);
+    const CB = new Batcher(this.M), k = new Kit(CB);
+    P.supplyCrate(k, false);
+    k.add('stencil', new THREE.PlaneGeometry(.38, .38), 0, .3, .281, {keepUV: true, shadow: false});
+    CB.flush(group);
+    const lid = new THREE.Group(); lid.position.set(0, .53, -.285); group.add(lid);
+    const LB = new Batcher(this.M), lk = new Kit(LB).local(0, 0, .285);
+    P.supplyLid(lk);
+    lk.add('stencil', new THREE.PlaneGeometry(.45, .45), 0, .086, 0, {rx: -Math.PI / 2, keepUV: true, shadow: false});
+    LB.flush(lid);
+    // glow inside the open crate + the floating weapon display
+    const glow = new THREE.Mesh(new THREE.PlaneGeometry(1.05, .45), new THREE.MeshBasicMaterial({color: 0xffb050, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false}));
+    glow.rotation.x = -Math.PI / 2; glow.position.y = .5; group.add(glow);
+    const display = new THREE.Group(); display.position.y = .62; display.rotation.y = Math.PI / 2; group.add(display);
+    const first = SUPPLY_CRATES.findIndex(c => c.firstSpawn);
+    const anchor = this.light(0, 0, 0, 0xffa63a, 3.5, 6, {flicker: .15, glow: 1.4});
+    const beamH = F2 - .9;
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(.3, .62, beamH, 16, 1, true), new THREE.MeshBasicMaterial({color: 0xffa040, transparent: true, opacity: .05, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide}));
+    beam.renderOrder = 5; this.root.add(beam); this.crateBeam = beam;
+    this.crate = {group, lid, glow, display, anchor, beam, beamH, spot: -1};
+    this.moveCrate(first < 0 ? 0 : first);
   }
+  // Put the Supply Crate (mesh, light, beam) on spot i.
+  moveCrate(i) {
+    const c = SUPPLY_CRATES[i], C = this.crate, h = c.floor ? F2 : 0;
+    C.spot = i; C.base = h;
+    C.group.position.set(c.at[0], h, -c.at[1]); C.group.rotation.y = c.rot || 0;
+    C.anchor.pos.set(c.at[0], h + 1.2, -c.at[1]); if (C.anchor.sprite) C.anchor.sprite.position.copy(C.anchor.pos);
+    const bh = (c.floor ? UPPER_TOP - F2 : F2) - .9;
+    C.beam.scale.y = bh / C.beamH; C.beam.position.set(c.at[0], h + bh / 2 + .55, -c.at[1]);
+  }
+  // Animate: lid 0..1 open, glow 0..1, sink 0..1 (crate drops into the floor while relocating).
+  crateState({lid = 0, glow = 0, sink = 0, beam = 1} = {}) {
+    const C = this.crate; if (!C) return;
+    C.lid.rotation.x = -lid * 1.9;
+    C.glow.material.opacity = glow * .55;
+    C.group.position.y = C.base - sink * .75; C.group.visible = sink < .99;
+    C.anchor.intensity = 3.5 * (1 - sink) + glow * 2; C.beamLevel = beam * (1 - sink);
+  }
+
 
   buildPower(B) {
     const k = new Kit(B), [x0, y0, x1, y1] = POWER.cage;
@@ -481,7 +509,7 @@ export class MapVisuals {
       a.intensity = on ? 3 : 0; (a.id === 'morse-dot' ? this.mat.morseDot : this.mat.morseDash).color.set(on ? 0xffc070 : this.power ? 0x5a3a18 : 0x2a2116);
     }
     const mast = this.anchors.find(a => a.id === 'mast'); if (mast) mast.level = (t % 2.2) < .25 ? 1 : 0;
-    if (this.crateBeam) this.crateBeam.material.opacity = .045 + Math.sin(t * 1.7) * .015;
+    if (this.crateBeam) this.crateBeam.material.opacity = (.045 + Math.sin(t * 1.7) * .015) * (this.crate?.beamLevel ?? 1);
     // Light levels (flicker/strobe), shared with the light pool.
     for (const a of this.anchors) {
       let v = a.id === 'mast' ? a.level : 1;

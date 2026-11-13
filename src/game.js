@@ -6,6 +6,7 @@ import {Input} from './input.js';
 import {Renderer} from './render.js';
 import {Weapons} from './weapons.js';
 import {Interactions} from './interact.js';
+import {SupplyCrate} from './crate.js';
 import {AudioManager} from './audio.js';
 import {loadZombie} from './assets.js';
 import {NavGrid} from './ai/nav.js';
@@ -59,6 +60,12 @@ const hooks = {
 };
 const interactions = new Interactions(world, view.map, player, hooks);
 interactions.addBarricades(barricades);
+const crate = new SupplyCrate({view, weapons, audio, hooks: {
+  message: (t, k) => hooks.message(t, k),
+  refund(n) { player.points += n; hooks.points(n); },
+  moved() { hooks.message('The Supply Crate has moved somewhere else on the airfield', 'bad'); },
+}});
+interactions.setCrate(crate);
 
 const zombies = new Zombies({scene: view.scene, camera: view.camera, nav, barricades, player, audio, quality: QUALITY, hooks: {
   hurt(z) { hurtPlayer(z); },
@@ -83,27 +90,40 @@ const later = (ms, fn) => { sfxTimers.push(setTimeout(fn, ms)); };
 const slice = (k, o = {}) => audio.play('pistol_reload', {offset: SLICE[k][0], duration: SLICE[k][1], ...o});
 weapons.onEvent = (kind, id) => {
   const c = WEAPONS[id] || weapons.config;
+  const fam = c.family, pistolish = fam === 'pistol';
   if (kind === 'fire') {
     const s = c.sound, [r0, r1] = s.rate;
     audio.play(s.key, {rate: r0 + Math.random() * (r1 - r0), volume: s.volume});
     if (s.layer) later(s.layer.delay * 1000, () => audio.play(s.layer.key, {rate: s.layer.rate * (.97 + Math.random() * .06), volume: s.layer.volume}));
     if (c.climb) player.pitch = Math.min(1.5, player.pitch + c.climb * (1 - weapons.adsT * .4));
-    if (c.cycle && weapons.mag > 0) later(c.cycle * (id === 'shotgun' ? 220 : 300), () => slice('rack', {rate: id === 'shotgun' ? .68 : .82, volume: .9}));
+    if (c.cycle && weapons.mag > 0) later(c.cycle * (fam === 'shotgun' ? 220 : 300), () => slice('rack', {rate: fam === 'shotgun' ? .68 : .82, volume: .9}));
+    if (c.reload === 'enbloc' && weapons.mag === 0) later(40, () => audio.play('pistol_empty_click', {rate: 2.6, volume: .9})); // en-bloc ping
   }
   if (kind === 'reload') {
-    const T = c.reload === 'shells' ? 0 : c.reloadTime * 1000;
+    const T = c.reload === 'shells' ? 0 : c.reloadTime * 1000, rate = pistolish ? 1 : fam === 'mg' ? .8 : .9;
     if (c.reload === 'mag') {
-      const rate = id === 'pistol' ? 1 : id === 'squad' ? .8 : .9;
       later(T * .12, () => slice('out', {rate})); later(T * .56, () => slice('in', {rate}));
-      if (id === 'pistol' ? weapons.reloadEmpty : true) later(T * (id === 'pistol' ? .73 : .7), () => slice('rack', {rate: rate * .95}));
+      if (pistolish ? weapons.reloadEmpty : true) later(T * (pistolish ? .73 : .7), () => slice('rack', {rate: rate * .95}));
     } else if (c.reload === 'clip') {
       later(T * .1, () => slice('rack', {rate: .78})); for (const f of [.36, .47, .58]) later(T * f, () => slice('in', {rate: 1.25, volume: .6}));
       later(T * .76, () => slice('rack', {rate: .86}));
+    } else if (c.reload === 'enbloc') {
+      if (!weapons.reloadEmpty) later(T * .14, () => slice('rack', {rate: .8}));
+      later(T * .5, () => slice('in', {rate: .9})); later(T * .67, () => slice('rack', {rate: .92, volume: 1}));
+    } else if (c.reload === 'belt') {
+      later(T * .12, () => slice('rack', {rate: .6})); later(T * .3, () => slice('out', {rate: .7})); later(T * .52, () => slice('in', {rate: .7}));
+      later(T * .64, () => audio.play('pistol_empty_click', {rate: .7, volume: .5})); later(T * .78, () => slice('rack', {rate: .62})); later(T * .86, () => slice('rack', {rate: .8}));
+    } else if (c.reload === 'break') {
+      later(T * .14, () => slice('rack', {rate: .7})); later(T * .24, () => audio.play('pistol_empty_click', {rate: .5, volume: .6}));
+      for (const f of [.42, .55]) later(T * f, () => slice('in', {rate: .75, volume: .8})); later(T * .8, () => slice('rack', {rate: .75}));
+    } else if (c.reload === 'revolver') {
+      later(T * .16, () => audio.play('pistol_empty_click', {rate: .8, volume: .7})); later(T * .3, () => slice('out', {rate: 1.3, volume: .6}));
+      later(T * .55, () => slice('in', {rate: 1.15})); later(T * .82, () => audio.play('pistol_empty_click', {rate: .9, volume: .8}));
     }
   }
   if (kind === 'shell') { slice('in', {rate: .72, volume: .9}); audio.play('pistol_empty_click', {rate: .6, volume: .4}); }
   if (kind === 'pump') later(80, () => slice('rack', {rate: .68}));
-  if (kind === 'empty') audio.play('pistol_empty_click', {cooldown: .15, rate: id === 'pistol' ? 1 : .8});
+  if (kind === 'empty') audio.play('pistol_empty_click', {cooldown: .15, rate: pistolish ? 1 : .8});
   if (kind === 'holster') { sfxTimers.forEach(clearTimeout); sfxTimers = []; }
   if (kind === 'draw') slice('in', {rate: .85, volume: .45});
 };
@@ -196,7 +216,7 @@ function frame(now) {
   }
   if (loaded && !started && input.active && !NO_ZOMBIES) { started = true; rounds.start(START_ROUND, TEST_MODE ? 1 : 3); setRound(START_ROUND - 1 || '', false); }
   if (loaded && (live || over)) { if (live) rounds.update(dt); zombies.update(dt); }
-  barricades.update(dt);
+  barricades.update(dt); crate.update(dt);
   if (shadowDirty > 0 && (shadowDirty -= dt) <= 0) view.refreshShadows();
   // Health regen + hurt flash
   sinceHurt += dt; hurtTimer = Math.max(0, hurtTimer - dt);
@@ -229,7 +249,7 @@ requestAnimationFrame(frame);
 // Test / tooling hook (used by the headless smoke test, harmless in normal play).
 window.__kestrel = {
   player, world, view, interactions, input, weapons, teleport,
-  give: id => weapons.give(id), TELEPORTS, nav, navMs, barricades, zombies, rounds, audio, stats,
+  give: id => weapons.give(id), crate, TELEPORTS, nav, navMs, barricades, zombies, rounds, audio, stats,
   addPoints: n => { player.points += n; },
   setPower: on => interactions.setPower(on),
   look: (yaw, pitch = 0) => { player.yaw = yaw; player.pitch = pitch; },
@@ -245,7 +265,7 @@ window.__kestrel = {
   pause(v = true) { paused = v; },
   advance(seconds, step = 1 / 60) {
     const area = world.areaAt(player.x, player.z, player.feet);
-    for (let t = 0; t < seconds - 1e-6; t += step) { weapons.update(step, input, player, onShot); view.updatePlayer(player); view.updateWeapon(weapons, input, step, player, area); }
+    for (let t = 0; t < seconds - 1e-6; t += step) { weapons.update(step, input, player, onShot); crate.update(step); view.map.update(step, view.camera); view.updatePlayer(player); view.updateWeapon(weapons, input, step, player, area); }
   },
   hurt: n => { for (let i = 0; i < n; i++) hurtPlayer(); },
   get loaded() { return loaded; }, get over() { return over; },

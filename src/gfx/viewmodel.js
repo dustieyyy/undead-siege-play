@@ -48,6 +48,7 @@ export class Viewmodel {
     const g = GUN_BUILDERS[id](), built = g.build(this.mats), spec = {...DEF, ...(g.vm || {})};
     const root = new THREE.Group(); root.name = 'vm:' + id; root.add(built.root); root.visible = false; this.scene.add(root);
     let tris = built.triangles;
+    const bare = built.root.clone(); // hands-free copy (shares geometry) for world displays (Supply Crate)
     const hands = {};
     for (const k of ['right', 'left']) {
       const h = g.hands?.[k]; if (!h) continue;
@@ -59,7 +60,7 @@ export class Viewmodel {
     }
     const rest = {};
     // reload hand targets (orientation): palm-up under the mag, fingers-down over the action, palm-up at the loading port
-    spec.magQ = handQ([0, 1, 0], [.35, .1, -1], -1); spec.clipQ = handQ([.2, 0, -1], [.15, -1, -.25], -1); spec.portQ = handQ([0, 1, .1], [.3, .15, -1], -1);
+    spec.magQ = handQ(spec.magPalm || [0, 1, 0], spec.magFingers || [.35, .1, -1], -1); spec.clipQ = handQ([.2, 0, -1], [.15, -1, -.25], -1); spec.portQ = handQ([0, 1, .1], [.3, .15, -1], -1);
     for (const [n, p] of Object.entries(built.parts)) rest[n] = {pos: p.position.clone(), rot: p.rotation.clone()};
     // muzzle flash: camera-facing star + two crossed side flames, additive
     const flash = new THREE.Group(); flash.position.copy(built.anchors.muzzle); built.root.add(flash);
@@ -70,16 +71,29 @@ export class Viewmodel {
     for (const r of [0, Math.PI / 2]) { const s = new THREE.Mesh(sideGeo, sideMat); s.rotation.z = r; s.scale.set(spec.flash * .55, spec.flash * 1.7, 1); flash.add(s); }
     flash.visible = false;
     // shotgun: a shell carried by the left hand while loading
-    let handShell = null;
-    if (g.kind === 'shotgun' && hands.left) {
+    let handShell = null, G_clip = null;
+    if ((g.kind === 'shotgun' || g.kind === 'break' || g.kind === 'revolver') && hands.left) {
       handShell = new THREE.Group();
       const hull = new THREE.Mesh(new THREE.CylinderGeometry(.0105, .0105, .052, 10), new THREE.MeshStandardMaterial({color: 0x8a1c12, roughness: .55}));
       const head = new THREE.Mesh(new THREE.CylinderGeometry(.0112, .0112, .014, 10), new THREE.MeshStandardMaterial({color: 0xd4a85a, metalness: .9, roughness: .3})); head.position.y = -.026;
-      handShell.add(hull, head); handShell.rotation.x = Math.PI / 2; handShell.position.set(.01, .03, -.075); handShell.visible = false;
+      if (g.kind === 'revolver') { // speed loader: six cartridges around a knob
+        const bm = new THREE.MeshStandardMaterial({color: 0xd4a85a, metalness: .9, roughness: .3}), cg = new THREE.CylinderGeometry(.0042, .0042, .03, 8);
+        handShell.clear(); for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, c = new THREE.Mesh(cg, bm); c.position.set(Math.cos(a) * .011, 0, Math.sin(a) * .011); handShell.add(c); }
+        const knob = new THREE.Mesh(new THREE.CylinderGeometry(.009, .009, .012, 12), new THREE.MeshStandardMaterial({color: 0x222222, roughness: .5})); knob.position.y = -.02; handShell.add(knob);
+      } else if (g.kind === 'break') { const h2 = handShell.clone(); handShell.children.forEach(c => c.position.x -= .012); h2.children.forEach(c => { c.position.x += .012; handShell.add(c.clone()); }); }
+      handShell.rotation.x = Math.PI / 2; handShell.position.set(.01, .03, -.075); handShell.visible = false;
       hands.left.holder.add(handShell);
     }
+    // bolt rifles: a stripper clip of five rounds pinched in the support hand
+    if (WEAPONS[id]?.reload === 'clip' && hands.left) {
+      const clip = new THREE.Group(), bm = new THREE.MeshStandardMaterial({color: 0xd4a85a, metalness: .9, roughness: .3});
+      const rg = new THREE.CylinderGeometry(.0045, .0045, .06, 8); rg.rotateZ(Math.PI / 2);
+      for (let i = 0; i < 5; i++) { const m = new THREE.Mesh(rg, bm); m.position.set(0, 0, -i * .0095); clip.add(m); }
+      const strip = new THREE.Mesh(new THREE.BoxGeometry(.006, .012, .05), new THREE.MeshStandardMaterial({color: 0x3a3c40, metalness: .7, roughness: .45})); strip.position.set(-.03, 0, -.019); clip.add(strip);
+      clip.position.set(.028, .015, -.112); clip.visible = false; hands.left.holder.add(clip); G_clip = clip;
+    }
     this.tris[id] = tris;
-    return {id, root, gun: built.root, parts: built.parts, rest, anchors: built.anchors, hands, spec, kind: g.kind, profiles: built.profiles, flash, star, handShell, tris};
+    return {id, root, gun: built.root, parts: built.parts, rest, anchors: built.anchors, hands, spec, kind: g.kind, profiles: built.profiles, flash, star, handShell, tris, bare, handClip: G_clip};
   }
   profiles(id) { return this.guns[id]?.profiles || []; }
   update(dt, w, player, area) {
@@ -156,13 +170,15 @@ export class Viewmodel {
     G.root.updateMatrixWorld(true);
     if (c.cycle) this.pendingEject = w.gun.mag > 0 ? {at: G.kind === 'shotgun' ? .32 : .38, kind: S.eject} : null;
     if (!c.cycle) this.eject(G, S.eject);
+    if (G.kind === 'enbloc' && w.gun.mag === 0) this.eject(G, 'clip', [.6, 3.2, .1]); // the ping
     const m = this.toWorld(G.gun.localToWorld(G.anchors.muzzle.clone()));
-    this.smoke.spawn(m, G.kind === 'shotgun' ? 1.6 : G.kind === 'squad' ? 1.2 : 1);
+    this.smoke.spawn(m, G.kind === 'shotgun' ? 1.6 : (G.kind === 'mg' || G.kind === 'belt' || G.kind === 'ptrs') ? 1.3 : 1);
   }
-  eject(G, kind) {
-    const S = G.spec; G.root.updateMatrixWorld(true);
+  eject(G, kind, vel) {
+    if (!kind || kind === 'none') return;
+    const S = G.spec, ev = vel || S.ejectVel; G.root.updateMatrixWorld(true);
     const p = this.toWorld(G.gun.localToWorld(G.anchors.eject.clone()));
-    const v = new THREE.Vector3(S.ejectVel[0] * (.8 + Math.random() * .4), S.ejectVel[1] * (.8 + Math.random() * .4), S.ejectVel[2] + (Math.random() - .5) * .5).transformDirection(this.mainCam.matrixWorld).multiplyScalar(Math.hypot(...S.ejectVel));
+    const v = new THREE.Vector3(ev[0] * (.8 + Math.random() * .4), ev[1] * (.8 + Math.random() * .4), ev[2] + (Math.random() - .5) * .5).transformDirection(this.mainCam.matrixWorld).multiplyScalar(Math.hypot(...ev));
     this.brass.spawn(kind, p, v);
   }
   // viewmodel camera space -> world, keeping the same screen position under the world camera's FOV
@@ -177,6 +193,7 @@ export class Viewmodel {
     const L = G.hands.left;
     if (L) { L.holder.position.copy(L.pos); L.holder.quaternion.copy(L.q); }
     if (G.handShell) G.handShell.visible = false;
+    if (G.handClip) G.handClip.visible = false;
     const ts = w.time - w.lastShot;
     // slide / reciprocating bolt blowback
     const blow = ts < .022 ? ts / .022 : Math.max(0, 1 - (ts - .022) / .07);
@@ -189,10 +206,18 @@ export class Viewmodel {
     if (parts.hammer) parts.hammer.rotation.x += Math.min(1, blow * 2) * .9;
     if (parts.trigger) parts.trigger.rotation.x += ts < .1 ? .35 * (1 - ts / .1) : 0;
     if (parts.cbolt && S.openBolt) parts.cbolt.position.z += blow * S.openBolt;
+    if (parts.cbolt && !S.openBolt && G.kind !== 'pistol') parts.cbolt.position.z += blow * (S.charge || .05) * .8;
+    if (G.kind === 'enbloc' && w.gun.mag === 0 && w.action !== 'reload') { if (parts.cbolt) parts.cbolt.position.z += S.charge; if (parts.mag) parts.mag.visible = false; }
+    if (parts.cylinder) parts.cylinder.rotation.z += ((w.shotSequence % 6) - 1 + Math.min(1, ts / .08)) * Math.PI / 3;
     const t = w.actionT;
     if (w.action === 'reload') {
-      if (c.reload === 'mag') this.reloadMag(G, S, t, P, R, w);
-      else if (c.reload === 'clip') this.reloadClip(G, S, t, P, R);
+      const k = c.reload;
+      if (k === 'mag') this.reloadMag(G, S, t, P, R, w);
+      else if (k === 'clip') this.reloadClip(G, S, t, P, R);
+      else if (k === 'enbloc') this.reloadEnbloc(G, S, t, P, R, w);
+      else if (k === 'belt') this.reloadBelt(G, S, t, P, R, w);
+      else if (k === 'break') this.reloadBreak(G, S, t, P, R, w);
+      else if (k === 'revolver') this.reloadRevolver(G, S, t, P, R, w);
       else this.reloadShells(G, S, t, P, R, w);
     } else if (w.action === 'cycle') {
       if (G.kind === 'shotgun') this.pumpAnim(G, S, seg(t, .04, .38) - seg(t, .45, .8), P, R, t);
@@ -223,6 +248,64 @@ export class Viewmodel {
     }
     if (G.parts.cbolt && S.charge) { const k = seg(t, .7, .75) - seg(t, .77, .8); G.parts.cbolt.position.z += k * S.charge; }
   }
+  // shared: move the support hand to a gun-space target (vm units) with orientation q, weight k
+  reach(G, to, q, k) {
+    const L = G.hands.left; if (!L || k <= 0) return;
+    L.holder.position.addScaledVector(V(to).sub(L.pos), k); L.holder.quaternion.copy(L.q).slerp(q, k);
+  }
+  tilt(S, t, P, R, a = .12, b = .86) { const k = seg(t, 0, a) - seg(t, b, 1); P.addScaledVector(V(S.reloadPos), k); R.addScaledVector(V(S.reloadRot), k); }
+  // M1 Garand: op rod back, push a fresh en-bloc clip down from above, rod slams home.
+  reloadEnbloc(G, S, t, P, R, w) {
+    this.tilt(S, t, P, R);
+    const parts = G.parts, held = w.reloadEmpty ? 1 - seg(t, .66, .7) : seg(t, .1, .2) - seg(t, .66, .7);
+    if (parts.cbolt) parts.cbolt.position.z += held * S.charge;
+    const down = seg(t, .32, .56);
+    if (parts.mag) { parts.mag.visible = t > .2; parts.mag.position.y += (1 - down) * .12; parts.mag.position.z += (1 - down) * .02; }
+    const hand = V(S.clipHand).add(V([0, (1 - down) * .12, 0]));
+    this.reach(G, hand.toArray(), S.clipQ, seg(t, .18, .3) - seg(t, .6, .66));
+    if (t > .66 && t < .72) R.x += .02;
+  }
+  // Belt-fed: open the feed cover, swap the ammo box, lay a belt, close, charge.
+  reloadBelt(G, S, t, P, R, w) {
+    this.tilt(S, t, P, R, .1, .9);
+    const parts = G.parts, open = seg(t, .08, .18) - seg(t, .72, .8);
+    if (parts.cover) parts.cover.rotation.x -= open * .85;
+    if (parts.mag) {
+      const out = V(S.beltOut || [0, -.05, 0]).add(V([0, -.18, .02]));
+      if (t < .36) parts.mag.position.addScaledVector(out, seg(t, .2, .36));
+      else parts.mag.position.addScaledVector(out, 1 - seg(t, .4, .56));
+      parts.mag.visible = !(t > .35 && t < .4);
+    }
+    const mag = parts.mag ? parts.mag.position : new THREE.Vector3();
+    const handAt = [mag.x, mag.y - .08, mag.z];
+    this.reach(G, handAt, S.magQ, seg(t, .16, .24) - seg(t, .54, .6));
+    this.reach(G, [-.02, .05, -.02], S.clipQ, seg(t, .58, .64) - seg(t, .8, .86));
+    if (parts.cbolt) parts.cbolt.position.z += (seg(t, .84, .88) - seg(t, .9, .93)) * (S.charge || .07);
+  }
+  // Break-action: hinge the barrels open, extract both hulls, drop two in, snap it shut.
+  reloadBreak(G, S, t, P, R, w) {
+    this.tilt(S, t, P, R, .1, .9);
+    const parts = G.parts, open = seg(t, .08, .2) - seg(t, .74, .82);
+    if (parts.barrels) parts.barrels.rotation.x -= open * .62;
+    R.x -= open * .25;
+    if (t > .22 && !this._broke) { this._broke = true; this.eject(G, 'shell', [.1, 1.4, 1.2]); this.eject(G, 'shell', [-.1, 1.4, 1.2]); }
+    if (t < .1) this._broke = false;
+    const k = seg(t, .3, .44) - seg(t, .66, .76);
+    this.reach(G, S.portHand || [-.03, .06, .02], S.clipQ, k);
+    if (G.handShell) G.handShell.visible = t > .3 && t < .62;
+    if (t > .74 && t < .84) R.x += .04;
+  }
+  // Revolver: swing the cylinder out, punch the empties, speed loader in, close.
+  reloadRevolver(G, S, t, P, R, w) {
+    this.tilt(S, t, P, R, .1, .9);
+    const parts = G.parts, open = seg(t, .08, .2) - seg(t, .76, .86);
+    if (parts.cylinder) { parts.cylinder.position.x -= open * .028; parts.cylinder.position.y -= open * .014; }
+    R.z += open * .5; R.x += (seg(t, .24, .3) - seg(t, .34, .4)) * .5; // flick up to dump
+    if (t > .3 && !this._dumped) { this._dumped = true; for (let i = 0; i < 6; i++) this.eject(G, 'pistol', [(Math.random() - .5) * .4, -.6, .6]); }
+    if (t < .1) this._dumped = false;
+    this.reach(G, [-.055, .01, -.03], S.portQ, seg(t, .36, .5) - seg(t, .7, .8));
+    if (G.handShell) G.handShell.visible = t > .36 && t < .66;
+  }
   reloadClip(G, S, t, P, R) {
     const tilt = seg(t, 0, .12) - seg(t, .86, 1), L = G.hands.left;
     P.addScaledVector(V(S.reloadPos), tilt); R.addScaledVector(V(S.reloadRot), tilt);
@@ -233,6 +316,7 @@ export class Viewmodel {
       const press = Math.max(0, Math.sin((t - .3) / .34 * Math.PI * 3)) * (t > .3 && t < .64 ? 1 : 0);
       L.holder.position.addScaledVector(to, k); L.holder.position.y -= press * .022 * k;
       L.holder.quaternion.copy(L.q).slerp(S.clipQ, k);
+      if (G.handClip) G.handClip.visible = t > .2 && t < .6;
     }
   }
   reloadShells(G, S, t, P, R, w) {

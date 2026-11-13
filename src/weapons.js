@@ -1,4 +1,4 @@
-import {WEAPONS} from './config.js';
+import {WEAPONS, STARTING_WEAPON} from './config.js';
 
 // Two-slot weapon logic (render-agnostic). The viewmodel reads `action`, `actionT`,
 // `shellPhase`, `adsT`, `lastShot` etc. to animate; game.js listens to onEvent for sounds.
@@ -7,8 +7,8 @@ const clamp01 = v => Math.max(0, Math.min(1, v));
 export class Weapons {
   constructor(world) {
     this.world = world;
-    this.slots = [this.make('pistol'), null]; this.slot = 0; this.next = null;
-    this.action = 'draw'; this.actionTime = 0; this.actionDur = WEAPONS.pistol.drawTime; this.cooldown = 0;
+    this.slots = [this.make(STARTING_WEAPON), null]; this.slot = 0; this.next = null;
+    this.action = 'draw'; this.actionTime = 0; this.actionDur = WEAPONS[STARTING_WEAPON].drawTime; this.cooldown = 0;
     this.adsT = 0; this.shotSequence = 0; this.lastShot = -9; this.time = 0; this.shellPhase = null; this.shells = 0; this.lastPumpShot = -9;
   }
   make(id) { const c = WEAPONS[id]; return {id, mag: c.magazine, reserve: c.reserve}; }

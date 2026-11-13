@@ -11,7 +11,7 @@ Everything in Undead Siege is original or permissively licensed. **No ripped gam
 | Sound effects, ambience, music and announcer (`assets/audio/`, 29 files) | **Audio generated with ElevenLabs (elevenlabs.io)**: Sound Effects v2, Eleven Music v2.5, Multilingual v2 TTS. Original prompts, no game IP | ElevenLabs **free tier**: attribution required, no commercial licence. Regenerate on a paid plan before any commercial release |
 | GLTFLoader, SkeletonUtils (`vendor/three/addons/`) | three.js r180 addons | MIT |
 | Map layout "Kestrel Field" | Original design (`kestrel-v2` floor plan) | Original |
-| Weapons and first-person arms (7 guns, gloved hands, sleeves), their textures, muzzle flash and smoke sprites | Built procedurally in `src/gfx/guns/`; original designs with made-up names, no real trademarks or markings, nothing taken from other games | Original, part of this project |
+| Weapons and first-person arms (27 WWII-era guns, gloved hands, sleeves), their textures, muzzle flash and smoke sprites | Built procedurally in `src/gfx/guns/` from the real firearms' general shapes, under their common historical designations. No models, textures or images from any game; no factory markings, national insignia or logos | Original, part of this project |
 | Perk names, Supply Crate, wall chalk outlines, stencils | Original names/shapes drawn in code; no logos or text from other games | Original |
 
 **Attribution: Audio by ElevenLabs (elevenlabs.io).** The game's title screen shows this line too.

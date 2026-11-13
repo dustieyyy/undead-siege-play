@@ -144,13 +144,20 @@ export const BARRICADES = [
   {id: 'loft-n', area: 'loft'},
 ];
 
+// Wall-buys: `id` is the weapon id (see WEAPONS); `spot` names the chalk location.
 export const WALLBUYS = [
-  {id: 'bolt', name: 'Bolt-Action Rifle', tier: 1, cost: 500, at: [6.3, 11.75], floor: 0, facing: 'S'},
-  {id: 'carbine', name: 'Semi-Auto Carbine', tier: 1, cost: 600, at: [-9.4, 5.2], floor: 0, facing: 'E'},
-  {id: 'shotgun', name: 'Trench Shotgun', tier: 2, cost: 1000, at: [25.4, -4], floor: 0, facing: 'W'},
-  {id: 'smg', name: 'Submachine Gun', tier: 2, cost: 1200, at: [15.75, -10], floor: 0, facing: 'W'},
-  {id: 'squad', name: 'Squad Automatic Rifle', tier: 3, cost: 1500, at: [51.4, -6], floor: 0, facing: 'W'},
-  {id: 'marksman', name: 'Marksman Rifle', tier: 3, cost: 1500, at: [15.4, 2.2], floor: 1, facing: 'W'},
+  {id: 'kar98k', spot: 'ops-n', name: 'Kar98k', tier: 1, cost: 500, at: [6.3, 11.75], floor: 0, facing: 'S'},
+  {id: 'p38', spot: 'ops-s', name: 'Walther P38', tier: 1, cost: 400, at: [9.2, .25], floor: 0, facing: 'N'},
+  {id: 'm1a1', spot: 'mess-e', name: 'M1A1 Carbine', tier: 1, cost: 600, at: [-9.4, 5.2], floor: 0, facing: 'E'},
+  {id: 'mosin', spot: 'mess-n', name: 'Mosin-Nagant', tier: 1, cost: 500, at: [-2, 11.75], floor: 0, facing: 'S'},
+  {id: 'mp40', spot: 'yard', name: 'MP40', tier: 2, cost: 1000, at: [15.75, -10], floor: 0, facing: 'W'},
+  {id: 'trench', spot: 'depot', name: 'M1897 Trench Gun', tier: 2, cost: 1500, at: [25.4, -4], floor: 0, facing: 'W'},
+  {id: 'doublebarrel', spot: 'depot-n', name: 'Double-Barreled Shotgun', tier: 2, cost: 1200, at: [19, 3.82], floor: 0, facing: 'S'},
+  {id: 'thompson', spot: 'walkway', name: 'Thompson', tier: 2, cost: 1200, at: [23, 7.88], floor: 0, facing: 'S'},
+  {id: 'bar', spot: 'hangar-e', name: 'BAR', tier: 3, cost: 1800, at: [51.4, -6], floor: 0, facing: 'W'},
+  {id: 'stg44', spot: 'hangar-s', name: 'STG-44', tier: 3, cost: 1600, at: [39, -7.4], floor: 0, facing: 'N'},
+  {id: 'g43', spot: 'tower', name: 'Gewehr 43', tier: 3, cost: 1200, at: [15.4, 2.2], floor: 1, facing: 'W'},
+  {id: 'garand', spot: 'quarters', name: 'M1 Garand', tier: 3, cost: 1400, at: [-2, 11.75], floor: 1, facing: 'S'},
 ];
 
 export const SUPPLY_CRATES = [
