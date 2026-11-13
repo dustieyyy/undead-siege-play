@@ -347,8 +347,14 @@ export class MapVisuals {
       out.position.z = .03; g.add(out);
       const pl = new THREE.Mesh(new THREE.PlaneGeometry(.34, .16), new THREE.MeshStandardMaterial({map: plate, roughness: .8, emissive: 0x302820, emissiveMap: plate}));
       pl.position.set(0, -.42, .03); g.add(pl);
-      this.root.add(g); this.wallbuyMeshes.push(g);
+      this.root.add(g); this.wallbuyMeshes.push(g); g.userData.outline = out; g.userData.id = w.id;
     }
+  }
+  // Replace a placeholder outline with art traced from the real gun model.
+  setWallbuyArt(id, tex) {
+    const g = this.wallbuyMeshes.find(m => m.userData.id === id); if (!g) return;
+    const m = g.userData.outline.material; m.map?.dispose(); m.map = tex; m.emissiveMap = tex; m.emissive.set(0x3a3428); m.needsUpdate = true;
+    g.userData.outline.scale.set(1.12, 1.12, 1);
   }
 
   buildDoors() {

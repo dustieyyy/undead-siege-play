@@ -1,4 +1,4 @@
-import {SETTINGS, DEBUG, TEST_MODE, QUALITY, NO_ZOMBIES, START_ROUND, GOD_MODE} from './config.js';
+import {SETTINGS, DEBUG, TEST_MODE, QUALITY, NO_ZOMBIES, START_ROUND, GOD_MODE, WEAPONS} from './config.js';
 import {TELEPORTS, DOORS, PERKS, SECRETS} from './map/kestrel.js';
 import {World} from './world.js';
 import {Player} from './player.js';
@@ -44,6 +44,12 @@ const hooks = {
       startPerkHums();
     }
   },
+  weaponState(id) { const c = WEAPONS[id]; return {owned: weapons.owns(id), full: weapons.ammoFull(id), name: c?.short}; },
+  buy(id) {
+    const r = weapons.give(id); audio.play('purchase_chime');
+    if (r === 'ammo') { audio.play('pistol_reload', {offset: 1.03, duration: .14, volume: .8}); hooks.message(`${WEAPONS[id].short} ammo refilled`, 'good'); }
+    else hooks.message(`${WEAPONS[id].name}${r === 'replace' ? ' — swapped for your old weapon' : ''}`, 'good');
+  },
   rebuild(bar) {
     if (!barricades.rebuild(bar)) return;
     audio.at('window_plank_rebuild', bar.center[0], bar.floorH + 1.3, -bar.center[1], {ref: 3});
@@ -69,18 +75,48 @@ const rounds = new Rounds({zombies, nav, interactions, player, hooks: {
   roundEnd(r) { audio.play('round_end_sting'); hooks.message(`ROUND ${r} SURVIVED`, 'good'); $('round').classList.add('flash'); },
 }});
 weapons.hitTest = (o, d, max) => zombies.hitTest(o, d, max);
-weapons.onEvent = kind => {
-  if (kind === 'fire') audio.play('pistol_shot', {rate: .95 + Math.random() * .1});
-  if (kind === 'reload') audio.play('pistol_reload');
-  if (kind === 'empty') audio.play('pistol_empty_click', {cooldown: .15});
+// Weapon sounds: only the pistol has recorded audio, so every gun reuses it with pitch shifts,
+// layering and slices of the reload recording (0-.16 s mag out, 1.03-1.17 mag in, 1.18-1.41 slide rack).
+const SLICE = {out: [0, .17], in: [1.03, .14], rack: [1.18, .23]};
+let sfxTimers = [];
+const later = (ms, fn) => { sfxTimers.push(setTimeout(fn, ms)); };
+const slice = (k, o = {}) => audio.play('pistol_reload', {offset: SLICE[k][0], duration: SLICE[k][1], ...o});
+weapons.onEvent = (kind, id) => {
+  const c = WEAPONS[id] || weapons.config;
+  if (kind === 'fire') {
+    const s = c.sound, [r0, r1] = s.rate;
+    audio.play(s.key, {rate: r0 + Math.random() * (r1 - r0), volume: s.volume});
+    if (s.layer) later(s.layer.delay * 1000, () => audio.play(s.layer.key, {rate: s.layer.rate * (.97 + Math.random() * .06), volume: s.layer.volume}));
+    if (c.climb) player.pitch = Math.min(1.5, player.pitch + c.climb * (1 - weapons.adsT * .4));
+    if (c.cycle && weapons.mag > 0) later(c.cycle * (id === 'shotgun' ? 220 : 300), () => slice('rack', {rate: id === 'shotgun' ? .68 : .82, volume: .9}));
+  }
+  if (kind === 'reload') {
+    const T = c.reload === 'shells' ? 0 : c.reloadTime * 1000;
+    if (c.reload === 'mag') {
+      const rate = id === 'pistol' ? 1 : id === 'squad' ? .8 : .9;
+      later(T * .12, () => slice('out', {rate})); later(T * .56, () => slice('in', {rate}));
+      if (id === 'pistol' ? weapons.reloadEmpty : true) later(T * (id === 'pistol' ? .73 : .7), () => slice('rack', {rate: rate * .95}));
+    } else if (c.reload === 'clip') {
+      later(T * .1, () => slice('rack', {rate: .78})); for (const f of [.36, .47, .58]) later(T * f, () => slice('in', {rate: 1.25, volume: .6}));
+      later(T * .76, () => slice('rack', {rate: .86}));
+    }
+  }
+  if (kind === 'shell') { slice('in', {rate: .72, volume: .9}); audio.play('pistol_empty_click', {rate: .6, volume: .4}); }
+  if (kind === 'pump') later(80, () => slice('rack', {rate: .68}));
+  if (kind === 'empty') audio.play('pistol_empty_click', {cooldown: .15, rate: id === 'pistol' ? 1 : .8});
+  if (kind === 'holster') { sfxTimers.forEach(clearTimeout); sfxTimers = []; }
+  if (kind === 'draw') slice('in', {rate: .85, volume: .45});
 };
+view.onBrass = (p, scale) => audio.play('pistol_empty_click', {rate: 2.1 + Math.random() * .5 - scale * .4, volume: .12, cooldown: .05});
 function onShot(shot) {
   view.showShot(shot);
-  const z = shot.zombie; if (!z) return;
-  const dmg = shot.damage * (shot.head ? SETTINGS.headshotMultiplier : 1);
-  const killed = zombies.damage(z, dmg, shot.head);
-  if (killed) { stats.kills++; if (shot.head) stats.headshots++; addPoints(shot.head ? SETTINGS.pointsHeadshotKill : SETTINGS.pointsKill); }
-  else addPoints(SETTINGS.pointsHit);
+  const hm = shot.headshot ?? SETTINGS.headshotMultiplier, hitOnce = new Set();
+  for (const p of shot.pellets) {
+    const z = p.zombie; if (!z || !z.alive) continue;
+    const killed = zombies.damage(z, shot.damage * (p.head ? hm : 1), p.head);
+    if (killed) { stats.kills++; if (p.head) stats.headshots++; addPoints(p.head ? SETTINGS.pointsHeadshotKill : SETTINGS.pointsKill); hitOnce.add(z); }
+    else if (!hitOnce.has(z)) { hitOnce.add(z); addPoints(SETTINGS.pointsHit); }
+  }
 }
 function hurtPlayer() {
   if (over || god) return;
@@ -143,11 +179,14 @@ function debugKeys() {
 }
 
 let previous = performance.now(), accumulator = 0, lastArea = null, stepIndex = 0;
+let paused = false;
 function frame(now) {
+  if (paused) { previous = now; view.draw(0); requestAnimationFrame(frame); return; }
   const dt = Math.max(0, Math.min((now - previous) / 1000, .1)); previous = now; accumulator += dt;
   const live = input.active && !over;
   while (accumulator >= SETTINGS.fixedStep) {
     if (live) {
+      player.speedScale = weapons.config.move * (1 - weapons.adsT * .35);
       player.update(SETTINGS.fixedStep, input);
       zombies.pushPlayer(player);
       weapons.update(SETTINGS.fixedStep, input, player, onShot);
@@ -177,7 +216,7 @@ function frame(now) {
   const area = world.areaAt(player.x, player.z, player.feet);
   if (area && area !== lastArea) { $('zone').textContent = 'KESTREL FIELD // ' + area.name; lastArea = area; }
   $('points').textContent = String(player.points);
-  view.updatePlayer(player); view.updateWeapon(weapons, input, dt, player); view.draw(dt);
+  view.updatePlayer(player); view.updateWeapon(weapons, input, dt, player, area); view.draw(dt);
   fpsAcc += dt; fpsFrames++;
   if (fpsAcc > .5) {
     fps = fpsFrames / fpsAcc; fpsAcc = 0; fpsFrames = 0;
@@ -189,7 +228,8 @@ requestAnimationFrame(frame);
 
 // Test / tooling hook (used by the headless smoke test, harmless in normal play).
 window.__kestrel = {
-  player, world, view, interactions, input, teleport, TELEPORTS, nav, navMs, barricades, zombies, rounds, audio, stats,
+  player, world, view, interactions, input, weapons, teleport,
+  give: id => weapons.give(id), TELEPORTS, nav, navMs, barricades, zombies, rounds, audio, stats,
   addPoints: n => { player.points += n; },
   setPower: on => interactions.setPower(on),
   look: (yaw, pitch = 0) => { player.yaw = yaw; player.pitch = pitch; },
@@ -201,6 +241,12 @@ window.__kestrel = {
   },
   spawnZombie: (x, y, opts = {}) => zombies.spawn({x, y, health: opts.health ?? 100, speed: opts.speed ?? 1}),
   setGod: v => { god = v; },
+  // Freeze the frame loop (still rendering) and advance weapons + viewmodel deterministically (screenshots).
+  pause(v = true) { paused = v; },
+  advance(seconds, step = 1 / 60) {
+    const area = world.areaAt(player.x, player.z, player.feet);
+    for (let t = 0; t < seconds - 1e-6; t += step) { weapons.update(step, input, player, onShot); view.updatePlayer(player); view.updateWeapon(weapons, input, step, player, area); }
+  },
   hurt: n => { for (let i = 0; i < n; i++) hurtPlayer(); },
   get loaded() { return loaded; }, get over() { return over; },
   get fps() { return fps; },

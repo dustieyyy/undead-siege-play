@@ -4,6 +4,10 @@ import {AREAS} from './map/kestrel.js';
 import {createMaterials} from './gfx/materials.js';
 import {MapVisuals} from './gfx/scene.js';
 import {Atmosphere} from './gfx/atmosphere.js';
+import {Viewmodel} from './gfx/viewmodel.js';
+import {chalkTexture} from './gfx/guns/chalk.js';
+import {WALLBUYS} from './map/kestrel.js';
+import {WEAPONS} from './config.js';
 
 let _blood = null;
 function bloodTexture() {
@@ -29,6 +33,7 @@ export class Renderer {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.15;
     document.body.prepend(this.renderer.domElement);
     this.canvas = this.renderer.domElement;
+    this.renderer.info.autoReset = false; // world + viewmodel passes are counted together
     this.M = createMaterials(q);
     this.map = new MapVisuals(this.scene, this.M, world, q);
     const rects = AREAS.filter(a => !a.outdoor && a.floor === 0).map(a => a.rect);
@@ -43,68 +48,55 @@ export class Renderer {
   }
   refreshShadows() { this.renderer.shadowMap.needsUpdate = true; }
   createWeaponModel() {
-    this.gunRoot = new THREE.Group();
-    this.camera.add(this.gunRoot);
     this.scene.add(this.camera);
-    const metal = new THREE.MeshStandardMaterial({color: 0x282e32, metalness: .72, roughness: .42});
-    const grip = new THREE.MeshStandardMaterial({color: 0x47372b, roughness: .88});
-    const steel = new THREE.MeshStandardMaterial({color: 0x59616a, metalness: .8, roughness: .33});
-    const addPart = (w, h, d, x, y, z, material) => {
-      const part = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
-      part.position.set(x, y, z); part.castShadow = false; this.gunRoot.add(part); return part;
-    };
-    addPart(.13, .12, .40, 0, .02, -.20, metal);
-    addPart(.115, .085, .24, 0, -.065, -.13, steel);
-    const handle = addPart(.105, .23, .13, 0, -.20, -.025, grip); handle.rotation.x = -.26;
-    addPart(.025, .035, .035, 0, .095, -.33, steel);
-    addPart(.085, .025, .035, 0, .095, -.055, steel);
-    this.muzzle = new THREE.Group();
-    this.muzzle.position.set(0, .025, -.43);
-    this.flash = new THREE.Mesh(new THREE.ConeGeometry(.10, .35, 7), new THREE.MeshBasicMaterial({color: 0xffbc61, transparent: true, opacity: .92, depthWrite: false}));
-    this.flash.rotation.x = -Math.PI / 2; this.flash.position.z = -.15; this.muzzle.add(this.flash); this.flash.visible = false;
-    // Keep the muzzle light always in the scene (intensity 0 when idle) so the
+    // Keep the world muzzle light always in the scene (intensity 0 when idle) so the
     // light count never changes => no shader recompiles/stutter when firing.
-    this.muzzleLight = new THREE.PointLight(0xff9b3c, 0, 4); this.muzzle.add(this.muzzleLight);
-    this.gunRoot.add(this.muzzle);
+    this.muzzleLight = new THREE.PointLight(0xff9b3c, 0, 5, 1.6); this.muzzleLight.position.set(.15, -.05, -.7); this.camera.add(this.muzzleLight);
+    this.vm = new Viewmodel(this.renderer, this.scene, this.camera, this.quality);
+    this.vm.brass.onBounce = (p, scale) => this.onBrass?.(p, scale);
+    WALLBUYS.forEach((w, i) => { if (this.vm.guns[w.id]) this.map.setWallbuyArt(w.id, chalkTexture(this.vm.profiles(w.id), i + 3)); });
   }
   showShot(shot) {
-    this.weaponKick = 1; this.muzzleTimer = .065;
-    if (shot.hit) this.hitmarkerTimer = .09;
-    const from = new THREE.Vector3(shot.origin.x, shot.origin.y - .12, shot.origin.z);
-    const to = new THREE.Vector3(shot.end.x, shot.end.y, shot.end.z);
-    const tracer = new THREE.Line(new THREE.BufferGeometry().setFromPoints([from, to]), new THREE.LineBasicMaterial({color: 0xffd08d, transparent: true, opacity: .7}));
-    this.scene.add(tracer); this.effects.push({object: tracer, seconds: .075});
-    if (shot.zombie) {
-      // Blood puff: a few dark-red sprites thrown back along the shot.
-      for (let i = 0; i < (shot.head ? 7 : 4); i++) {
-        const s = new THREE.Sprite(new THREE.SpriteMaterial({map: bloodTexture(), color: shot.head ? 0x8a0d08 : 0x6a0b07, transparent: true, depthWrite: false, opacity: .9}));
-        s.position.copy(to); s.scale.setScalar(.12 + Math.random() * .14); this.scene.add(s);
-        const v = new THREE.Vector3((Math.random() - .5) * 1.6, Math.random() * 1.2, (Math.random() - .5) * 1.6).addScaledVector(from.clone().sub(to).normalize(), -.6);
-        this.effects.push({object: s, seconds: .35 + Math.random() * .15, vel: v, grow: 1.8});
+    if (shot.pellets.some(p => p.zombie)) this.hitmarkerTimer = .09;
+    const G = this.vm.cur, from = G ? this.vm.toWorld(G.gun.localToWorld(G.anchors.muzzle.clone())) : new THREE.Vector3(shot.origin.x, shot.origin.y - .12, shot.origin.z);
+    shot.pellets.forEach((p, i) => {
+      const to = new THREE.Vector3(p.end.x, p.end.y, p.end.z);
+      if (i < 3 && Math.random() < (shot.pellets.length > 1 ? .6 : .85)) {
+        const a = from.clone().lerp(to, .04 + Math.random() * .05);
+        const tracer = new THREE.Line(new THREE.BufferGeometry().setFromPoints([a, to]), new THREE.LineBasicMaterial({color: 0xffd08d, transparent: true, opacity: .55}));
+        this.scene.add(tracer); this.effects.push({object: tracer, seconds: .06});
       }
-    } else if (shot.hit) {
-      const impact = new THREE.Mesh(new THREE.SphereGeometry(.05, 6, 6), new THREE.MeshBasicMaterial({color: 0xffd29c}));
-      impact.position.copy(to); this.scene.add(impact); this.effects.push({object: impact, seconds: .17});
-    }
+      if (p.zombie) {
+        // Blood puff: a few dark-red sprites thrown back along the shot.
+        for (let k = 0; k < (p.head ? 6 : 3); k++) {
+          const s = new THREE.Sprite(new THREE.SpriteMaterial({map: bloodTexture(), color: p.head ? 0x8a0d08 : 0x6a0b07, transparent: true, depthWrite: false, opacity: .9}));
+          s.position.copy(to); s.scale.setScalar(.12 + Math.random() * .14); this.scene.add(s);
+          const v = new THREE.Vector3((Math.random() - .5) * 1.6, Math.random() * 1.2, (Math.random() - .5) * 1.6).addScaledVector(from.clone().sub(to).normalize(), -.6);
+          this.effects.push({object: s, seconds: .35 + Math.random() * .15, vel: v, grow: 1.8});
+        }
+      } else if (p.hit) {
+        const s = new THREE.Sprite(new THREE.SpriteMaterial({map: bloodTexture(), color: 0xffd29c, transparent: true, depthWrite: false, opacity: .95, blending: THREE.AdditiveBlending}));
+        s.position.copy(to); s.scale.setScalar(.09); this.scene.add(s); this.effects.push({object: s, seconds: .09});
+        const d = new THREE.Sprite(new THREE.SpriteMaterial({map: bloodTexture(), color: 0x8a8278, transparent: true, depthWrite: false, opacity: .5}));
+        d.position.copy(to); d.scale.setScalar(.12); this.scene.add(d);
+        this.effects.push({object: d, seconds: .5, vel: new THREE.Vector3(0, .5, 0), grow: 2.2});
+      }
+    });
   }
-  updateWeapon(weapons, input, dt, player) {
-    document.getElementById('weapon-name').textContent = weapons.config.name;
+  updateWeapon(weapons, input, dt, player, area) {
+    const c = weapons.config;
+    document.getElementById('weapon-name').textContent = innerWidth < 760 ? c.short : c.name;
     document.getElementById('ammo').textContent = weapons.mag + ' / ' + weapons.reserve;
-    document.getElementById('reload').textContent = weapons.reloadRemaining > 0 ? 'RELOADING' : '';
-    const ads = input.aiming && input.active;
-    this.camera.fov += ((ads ? 59 : 75) - this.camera.fov) * Math.min(1, dt * 12);
-    this.camera.updateProjectionMatrix();
-    this.weaponKick = Math.max(0, this.weaponKick - dt * 9);
-    this.muzzleTimer = Math.max(0, this.muzzleTimer - dt);
+    document.getElementById('reload').textContent = weapons.action === 'reload' ? 'RELOADING' : weapons.mag === 0 && weapons.reserve === 0 ? 'NO AMMO' : weapons.mag === 0 ? 'PRESS R' : '';
+    const other = weapons.slots[1 - weapons.slot];
+    document.getElementById('weapon-alt').textContent = other ? WEAPONS[other.id].short : '';
+    this.vm.update(dt, weapons, player, area);
+    const ads = this.vm.adsE;
+    const fov = 75 + (c.adsFov - 75) * ads + this.vm.sprint * 4;
+    if (Math.abs(fov - this.camera.fov) > .01) { this.camera.fov = fov; this.camera.updateProjectionMatrix(); }
     this.hitmarkerTimer = Math.max(0, this.hitmarkerTimer - dt);
-    this.flash.visible = this.muzzleTimer > 0; this.muzzleLight.intensity = this.muzzleTimer > 0 ? 8 : 0;
+    this.muzzleLight.intensity = this.vm.flashLevel * 9;
     document.getElementById('hitmarker').style.opacity = this.hitmarkerTimer > 0 ? '.8' : '0';
-    const bob = ads ? 0 : Math.sin(player.bob) * .012 * player.moving, bobY = ads ? 0 : Math.abs(Math.cos(player.bob)) * .01 * player.moving;
-    const x = (ads ? 0 : .31) + bob, y = (ads ? -.205 : -.30) - bobY, z = ads ? -.63 : -.56;
-    this.gunRoot.position.x += (x - this.gunRoot.position.x) * Math.min(1, dt * 15);
-    this.gunRoot.position.y += (y - this.gunRoot.position.y) * Math.min(1, dt * 15);
-    this.gunRoot.position.z += (z + this.weaponKick * .08 - this.gunRoot.position.z) * Math.min(1, dt * 20);
-    this.gunRoot.rotation.x = this.weaponKick * .11;
     for (let i = this.effects.length - 1; i >= 0; i--) {
       const fx = this.effects[i]; fx.seconds -= dt;
       if (fx.vel) { fx.object.position.addScaledVector(fx.vel, dt); fx.vel.y -= 6 * dt; fx.object.scale.multiplyScalar(1 + fx.grow * dt); fx.object.material.opacity = Math.max(0, fx.object.material.opacity - dt * 2); }
@@ -114,13 +106,15 @@ export class Renderer {
   updatePlayer(player) {
     this.camera.position.set(player.x, player.eyeY + Math.abs(Math.sin(player.bob)) * .025 * player.moving, player.z);
     this.camera.rotation.order = 'YXZ';
-    this.camera.rotation.y = player.yaw; this.camera.rotation.x = player.pitch;
+    this.camera.rotation.y = player.yaw; this.camera.rotation.x = player.pitch + (this.vm ? this.vm.punch.p : 0);
     document.getElementById('stamina').style.width = Math.round(player.stamina * 100) + '%';
     document.getElementById('health').style.width = player.health + '%';
   }
   draw(dt) {
     this.map.update(dt, this.camera);
     this.atmo.update(dt);
+    this.renderer.info.reset();
     this.renderer.render(this.scene, this.camera);
+    this.vm.render();
   }
 }

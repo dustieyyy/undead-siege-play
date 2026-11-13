@@ -332,3 +332,4 @@ export function stencil() {
   ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = 'rgba(214,150,52,.9)'; ctx.fillRect(60, s - 45, s - 120, 12);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
+export {fbm, paint, finish, reseed, rand, clamp, mix, smooth};

@@ -5,7 +5,7 @@ export class Player {
     this.world = world;
     this.x = START.at[0]; this.z = -START.at[1]; this.feet = 0; this.vy = 0; this.grounded = true;
     this.yaw = START.yaw; this.pitch = 0; this.health = 100; this.stamina = 1; this.points = SETTINGS.startPoints;
-    this.bob = 0; this.moving = 0;
+    this.bob = 0; this.moving = 0; this.sprinting = false; this.speedScale = 1;
   }
   get eyeY() { return this.feet + SETTINGS.eyeHeight; }
   look(dx, dy) { this.yaw -= dx * SETTINGS.mouseSensitivity; this.pitch = Math.max(-1.5, Math.min(1.5, this.pitch - dy * SETTINGS.mouseSensitivity)); }
@@ -20,8 +20,9 @@ export class Player {
     if (input.touchMove) { forward -= input.touchMove.y; strafe += input.touchMove.x; }
     const length = Math.hypot(forward, strafe);
     if (length > 1) { forward /= length; strafe /= length; }
-    const sprint = (input.down('ShiftLeft') || input.down('ShiftRight') || input.touchSprint) && forward > 0 && this.stamina > 0;
-    const speed = sprint ? SETTINGS.sprintSpeed : SETTINGS.walkSpeed;
+    const sprint = (input.down('ShiftLeft') || input.down('ShiftRight') || input.touchSprint) && forward > 0 && this.stamina > 0 && !input.aiming && !this.noSprint;
+    this.sprinting = sprint;
+    const speed = (sprint ? SETTINGS.sprintSpeed : SETTINGS.walkSpeed) * this.speedScale;
     this.stamina = Math.max(0, Math.min(1, this.stamina + (sprint ? -dt / SETTINGS.sprintSeconds : dt * SETTINGS.staminaRegenPerSecond)));
     const dx = (-Math.sin(this.yaw) * forward + Math.cos(this.yaw) * strafe) * speed * dt;
     const dz = (-Math.cos(this.yaw) * forward - Math.sin(this.yaw) * strafe) * speed * dt;

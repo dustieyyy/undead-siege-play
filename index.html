@@ -55,7 +55,14 @@
     #touch { position: fixed; inset: 0; z-index: 3; pointer-events: none; display: none; }
     #touch.on { display: block; }
     .tbtn { position: absolute; pointer-events: auto; width: 64px; height: 64px; border-radius: 50%; border: 2px solid #c9a97a88; background: #00000055; color: #e8d6b4; font-size: 12px; display: grid; place-items: center; }
-    #t-fire { right: 24px; bottom: 130px; width: 84px; height: 84px; } #t-aim { right: 124px; bottom: 200px; } #t-reload { right: 124px; bottom: 120px; } #t-use { right: 34px; bottom: 236px; }
+    #t-fire { right: 24px; bottom: 130px; width: 84px; height: 84px; } #t-aim { right: 124px; bottom: 200px; } #t-reload { right: 124px; bottom: 120px; } #t-use { right: 34px; bottom: 236px; } #t-swap { right: 214px; bottom: 150px; width: 56px; height: 56px; }
+    #weapon-alt { display: block; font-size: 11px; opacity: .55; letter-spacing: .08em; }
+    #weapon-alt:not(:empty)::before { content: 'Q ▸ '; }
+    body.ads #crosshair { opacity: 0; }
+    #scope { position: fixed; inset: 0; pointer-events: none; display: none; z-index: 2; background: radial-gradient(circle at 50% 50%, transparent 0 31vmin, rgba(0,0,0,.6) 31.5vmin, #000 33vmin); }
+    #scope::before { content: ''; position: absolute; left: 50%; top: 50%; width: 66vmin; height: 1px; transform: translate(-50%, -50%); background: linear-gradient(90deg, #000 0 38%, transparent 38% 48%, #000 48% 52%, transparent 52% 62%, #000 62%); }
+    #scope::after { content: ''; position: absolute; left: 50%; top: 50%; width: 2px; height: 33vmin; transform: translate(-50%, 0); background: #000; }
+    body.scoped #scope { display: block; } body.scoped #crosshair { opacity: 0; }
     @media (max-width: 600px) { #tip { display: none; } #bars { width: 160px; left: 44%; } }
     #hurt { position: fixed; inset: 0; pointer-events: none; z-index: 1; opacity: 0; background: radial-gradient(ellipse at center, transparent 35%, rgba(150,0,0,.75) 100%); }
     #round.flash { animation: rf 2.6s ease-out; }
@@ -83,19 +90,19 @@
     </div>
   </div>
   <div id="hud">
-    <div id="crosshair"></div><div id="hitmarker"></div>
+    <div id="scope"></div><div id="crosshair"></div><div id="hitmarker"></div>
     <div id="zone">KESTREL FIELD // OPS ROOM</div>
     <div id="power">POWER OFF</div>
     <div id="left"><div id="round"></div><div id="points">500</div><div id="points-delta"></div></div>
     <div id="bars"><span class="label">HEALTH</span><div class="bar"><div class="fill" id="health"></div></div><span class="label">STAMINA</span><div class="bar"><div class="fill" id="stamina"></div></div></div>
-    <div id="right"><span id="weapon-name">PISTOL</span><br><strong id="ammo">8 / 64</strong><div id="reload"></div></div>
+    <div id="right"><span id="weapon-alt"></span><span id="weapon-name">PISTOL</span><br><strong id="ammo">8 / 64</strong><div id="reload"></div></div>
     <div id="prompt"></div><div id="holdwrap"><div id="holdbar"></div></div>
     <div id="message"></div>
     <div id="debug" hidden></div>
     <div id="tip">KESTREL FIELD v3 • survive the rounds</div>
   </div>
   <div id="gameover" hidden><div><h2>YOU DIED</h2><div id="go-round"></div><div id="go-stats"></div><button id="restart">RESTART</button></div></div>
-  <div id="touch" hidden><div id="stick"></div><div class="tbtn" id="t-fire">FIRE</div><div class="tbtn" id="t-aim">AIM</div><div class="tbtn" id="t-reload">RELOAD</div><div class="tbtn" id="t-use">USE</div></div>
+  <div id="touch" hidden><div id="stick"></div><div class="tbtn" id="t-fire">FIRE</div><div class="tbtn" id="t-aim">AIM</div><div class="tbtn" id="t-reload">RELOAD</div><div class="tbtn" id="t-use">USE</div><div class="tbtn" id="t-swap">SWAP</div></div>
   <script type="module" src="./src/game.js"></script>
 </body>
 </html>

@@ -3,7 +3,7 @@ export class Input {
   constructor(element, overlay, onLook) {
     this.keys = new Set(); this.justPressed = new Set(); this.locked = false; this.forced = TEST_MODE;
     this.shooting = false; this.aiming = false; this.firePressed = false; this.touchMove = null; this.touchSprint = false; this.touchUse = false;
-    this.onLook = onLook;
+    this.onLook = onLook; this.swapPressed = false;
     const release = () => { this.keys.clear(); this.justPressed.clear(); this.shooting = false; this.aiming = false; this.firePressed = false; };
     window.addEventListener('keydown', e => { if (['Space', 'ArrowUp', 'ArrowDown', 'F3', 'Backquote'].includes(e.code)) e.preventDefault(); if (!this.keys.has(e.code)) this.justPressed.add(e.code); this.keys.add(e.code); });
     window.addEventListener('keyup', e => this.keys.delete(e.code));
@@ -19,6 +19,7 @@ export class Input {
       if (e.button === 2) this.aiming = true;
     });
     document.addEventListener('mouseup', e => { if (e.button === 0) this.shooting = false; if (e.button === 2) this.aiming = false; });
+    window.addEventListener('wheel', e => { if (this.active && Math.abs(e.deltaY) > 2) this.swapPressed = true; }, {passive: true});
     document.addEventListener('mousemove', e => { if (this.locked) onLook(e.movementX, e.movementY); });
     this.touchDevice = matchMedia('(pointer: coarse)').matches && 'ontouchstart' in window;
     if (this.touchDevice) this.setupTouch();
@@ -51,8 +52,10 @@ export class Input {
     btn('t-aim', () => { this.aiming = !this.aiming; });
     btn('t-reload', () => this.justPressed.add('KeyR'));
     btn('t-use', () => { this.touchUse = true; }, () => { this.touchUse = false; });
+    btn('t-swap', () => { this.swapPressed = true; });
   }
   down(code) { return this.active && (this.keys.has(code) || (code === 'KeyF' && this.touchUse)); }
   consume(code) { const value = this.active && this.justPressed.has(code); this.justPressed.delete(code); return value; }
+  consumeSwap() { const v = this.active && this.swapPressed; this.swapPressed = false; return v; }
   consumeFire() { const value = this.active && this.firePressed; this.firePressed = false; return value; }
 }

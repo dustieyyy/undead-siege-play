@@ -47,7 +47,11 @@ export class Interactions {
         return {text: `Hold F to ${it.door.debris ? 'clear debris' : 'open door'} — ${it.door.name} [${it.door.cost}]`, can: pts >= it.door.cost, cost: it.door.cost};
       case 'barricade': return it.bar.boards < 6 && it.bar.occupant?.state !== 'vault' ? {text: 'Hold F to rebuild barricade', can: true, rebuild: true} : null;
       case 'power': return this.power ? null : {text: 'Hold F to turn on the power', can: true};
-      case 'wallbuy': return {text: `${it.data.name} [${it.data.cost}] — wall-buy coming next update`, can: false, info: true};
+      case 'wallbuy': {
+        const st = this.hooks.weaponState?.(it.id) || {}, name = st.name || it.data.name, ammo = Math.round(it.data.cost / 2);
+        if (st.owned) return st.full ? {text: `${name} — ammo full`, can: false, info: true} : {text: `Hold F to buy ammo — ${name} [${ammo}]`, can: pts >= ammo, cost: ammo};
+        return {text: `Hold F to buy ${name} [${it.data.cost}]`, can: pts >= it.data.cost, cost: it.data.cost};
+      }
       case 'perk': return {text: `${it.data.name} [${it.data.cost}]${it.data.needsPower && !this.power ? ' — needs power' : ''} — perks coming next update`, can: false, info: true};
       case 'crate': return {text: `Supply Crate [${SUPPLY_CRATE_COST}] — coming next update`, can: false, info: true};
       case 'radio': return {text: 'The field radio crackles… (something is missing)', can: false, info: true};
@@ -62,6 +66,11 @@ export class Interactions {
       this.hooks.message?.(`${d.name} opened`, 'good'); this.hooks.event?.(d.debris ? 'debris' : 'door', d);
     } else if (it.kind === 'power') { this.setPower(true); this.hooks.event?.('power'); }
     else if (it.kind === 'barricade') this.hooks.rebuild?.(it.bar);
+    else if (it.kind === 'wallbuy') {
+      const pr = this.prompt(it); if (!pr || !pr.cost) return;
+      if (this.player.points < pr.cost) { this.hooks.message?.('Not enough points', 'bad'); return; }
+      this.player.points -= pr.cost; this.hooks.points?.(-pr.cost); this.hooks.buy?.(it.id, pr.cost);
+    }
   }
   openDoor(d) {
     if (d.open) return;
