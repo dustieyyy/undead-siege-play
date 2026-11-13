@@ -1,0 +1,108 @@
+{
+  "source": "Undead Siege v0.4 procedural viewmodels",
+  "engine": "three.js 0.180",
+  "orientation": "muzzle points toward -Z, Y is up",
+  "files": [
+    {
+      "id": "pistol",
+      "bytes": 849396,
+      "reloadType": "mag",
+      "parts": 8,
+      "magazine": true,
+      "bolt": true,
+      "pump": false,
+      "filename": "pistol.glb"
+    },
+    {
+      "id": "glock",
+      "bytes": 872932,
+      "reloadType": "mag",
+      "parts": 9,
+      "magazine": true,
+      "bolt": true,
+      "pump": false,
+      "filename": "glock.glb"
+    },
+    {
+      "id": "revolver",
+      "bytes": 242080,
+      "reloadType": "cylinder",
+      "parts": 17,
+      "magazine": true,
+      "bolt": true,
+      "pump": false,
+      "filename": "revolver.glb"
+    },
+    {
+      "id": "smg",
+      "bytes": 948272,
+      "reloadType": "mag",
+      "parts": 39,
+      "magazine": true,
+      "bolt": true,
+      "pump": false,
+      "filename": "smg.glb"
+    },
+    {
+      "id": "carbine",
+      "bytes": 1779272,
+      "reloadType": "mag",
+      "parts": 78,
+      "magazine": true,
+      "bolt": true,
+      "pump": false,
+      "filename": "carbine.glb"
+    },
+    {
+      "id": "rifle",
+      "bytes": 1799440,
+      "reloadType": "mag",
+      "parts": 78,
+      "magazine": true,
+      "bolt": true,
+      "pump": false,
+      "filename": "rifle.glb"
+    },
+    {
+      "id": "shotgun",
+      "bytes": 599840,
+      "reloadType": "shell",
+      "parts": 22,
+      "magazine": false,
+      "bolt": true,
+      "pump": true,
+      "filename": "shotgun.glb"
+    },
+    {
+      "id": "sniper",
+      "bytes": 922660,
+      "reloadType": "bolt",
+      "parts": 37,
+      "magazine": true,
+      "bolt": true,
+      "pump": false,
+      "filename": "sniper.glb"
+    },
+    {
+      "id": "lmg",
+      "bytes": 1540660,
+      "reloadType": "box",
+      "parts": 68,
+      "magazine": true,
+      "bolt": true,
+      "pump": false,
+      "filename": "lmg.glb"
+    },
+    {
+      "id": "raygun",
+      "bytes": 367792,
+      "reloadType": "cell",
+      "parts": 32,
+      "magazine": true,
+      "bolt": true,
+      "pump": false,
+      "filename": "raygun.glb"
+    }
+  ],
+  "generationDate": "2026-11-12"
+}
