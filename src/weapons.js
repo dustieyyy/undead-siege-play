@@ -48,7 +48,7 @@ export class Weapons {
     return true;
   }
   update(dt, input, player, onShot) {
-    this.time += dt; this.cooldown = Math.max(0, this.cooldown - dt);
+    this.time += dt; this.stepDt = dt; this.cooldown = Math.max(-1, this.cooldown - dt);
     const c = this.config, g = this.gun;
     // swap / select
     if (input.consume('KeyQ') || input.consumeSwap?.()) this.swap();
@@ -60,7 +60,9 @@ export class Weapons {
     this.ads = wantAds;
     // actions
     this.actionTime += dt;
-    let fireWanted = c.auto ? input.shooting : input.consumeFire();
+    // Auto: fire while the trigger is held (a quick tap still fires once). Semi/bolt/pump: one shot per press.
+    const pressed = input.consumeFire();
+    let fireWanted = c.auto ? (input.shooting || pressed) : pressed;
     if (this.action === 'reload') {
       if (c.reload === 'shells') {
         if (fireWanted && g.mag > 0 && this.shellPhase === 'shell') { this.shellPhase = 'end'; this.begin('reload', c.reloadEnd); this.shellPhase = 'end'; fireWanted = false; }
@@ -82,13 +84,13 @@ export class Weapons {
     } else if (this.action === 'cycle') {
       if (this.actionTime >= this.actionDur) this.begin('ready', 0); else fireWanted = false;
     }
-    if (!fireWanted || this.cooldown > 0 || this.action !== 'ready') return;
+    if (!fireWanted || this.cooldown > 1e-6 || this.action !== 'ready') return;
     if (player.sprinting) return;
     if (!g.mag) { if (!this.reload()) this.onEvent?.('empty', this.id); return; }
     this.fire(c, g, player, onShot);
   }
   fire(c, g, player, onShot) {
-    g.mag--; this.cooldown = c.interval; this.shotSequence++; this.lastShot = this.time;
+    g.mag--; this.cooldown = Math.max(this.cooldown, -(this.stepDt || 0)) + c.interval; this.shotSequence++; this.lastShot = this.time; // carry the cooldown remainder so rpm is exact at a fixed step
     const yaw = player.yaw, pitch = player.pitch;
     const forward = {x: -Math.sin(yaw) * Math.cos(pitch), y: Math.sin(pitch), z: -Math.cos(yaw) * Math.cos(pitch)};
     const right = {x: Math.cos(yaw), y: 0, z: -Math.sin(yaw)};
