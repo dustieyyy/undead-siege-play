@@ -36,5 +36,6 @@ QUALITY NOTE:
 PRIMARY REPOSITORY (USER CHOICE):
  https://github.com/dustieyyy/undead-siege-play
 
-ORIGINAL GAME CODE:
- https://github.com/dustieyyy/Undead-Siege
+SOURCE:
+ Exported from the project's original Undead Siege v0.4 procedural weapon-view geometry.
+ The 3D assets in this directory are now stored in the primary repository above.
